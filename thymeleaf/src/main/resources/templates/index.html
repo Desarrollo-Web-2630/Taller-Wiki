@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wiki — Sistema de Gestión de Procesos</title>
+    <!-- Estilos de Bootstrap 5 para maquetado rápido -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+
+    <!-- Navegación Base -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4">
+        <div class="container">
+            <a class="navbar-brand fw-bold" href="/">Wiki Procesos</a>
+            <div class="navbar-nav">
+                <a class="nav-link active" href="/">Inicio</a>
+                <a class="nav-link" href="/wiki/arquitectura">Arquitectura</a>
+                <a class="nav-link" href="/wiki/historias-usuario">Historias de Usuario</a>
+                <a class="nav-link" href="/wiki/entregas">Entregas</a>
+                <a class="nav-link" href="/contacto">Contacto</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Contenido Principal -->
+    <main class="container">
+        <div class="p-5 mb-4 bg-white rounded-3 shadow-sm border">
+            <div class="container-fluid py-2">
+                <h1 class="display-5 fw-bold text-primary">Sistema de Gestión de Procesos Empresariales</h1>
+                <p class="col-md-10 fs-4 text-muted mt-3">
+                    Portal de documentación técnica y arquitectura web del sistema multiempresa.
+                </p>
+                <hr class="my-4">
+                <div class="row g-4 mt-2">
+                    <div class="col-md-6">
+                        <div class="card h-100 border-0 bg-light">
+                            <div class="card-body">
+                                <h5 class="card-title fw-bold">🏗️ Arquitectura MVC</h5>
+                                <p class="card-text">Consulta la distribución de controladores, modelos y la estrategia de aislamiento de información por organización.</p>
+                                <a href="/wiki/arquitectura" class="btn btn-outline-primary btn-sm">Ver Arquitectura</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card h-100 border-0 bg-light">
+                            <div class="card-body">
+                                <h5 class="card-title fw-bold">📋 Historias de Usuario</h5>
+                                <p class="card-text">Explora las 20 historias de usuario (HU-01 a HU-20) detalladas para la gestión de procesos, actividades, arcos, gateways y roles.</p>
+                                <a href="/wiki/historias-usuario" class="btn btn-outline-primary btn-sm">Ver Historias</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer Base -->
+    <footer class="text-center text-muted py-4 mt-5 border-top bg-white">
+        <div class="container">
+            <p class="mb-0">Taller Wiki — Desarrollo Web | Spring Boot & Thymeleaf</p>
+        </div>
+    </footer>
+
+</body>
+</html>
