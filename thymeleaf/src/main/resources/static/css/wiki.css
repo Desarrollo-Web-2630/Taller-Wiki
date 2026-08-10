@@ -1,0 +1,19 @@
+#content {
+  display: flex;
+  gap: 40px;
+  align-content: center;
+  justify-content: space-between;
+}
+
+.information {
+  width: 60%;
+}
+
+aside {
+  width: 12%;
+}
+
+nav {
+  width: 12%;
+  display: flex;
+}
