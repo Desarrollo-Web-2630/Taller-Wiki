@@ -14,34 +14,34 @@
             <h1 class="form-title">Formulario de Contáctenos</h1>
             <p class="form-subtitle">Ingresa tus datos e inquietud respecto a la documentación o el sistema.</p>
 
-            <form id="contactoForm" novalidate>
+            <form id="contactoForm" th:action="@{/contacto}" method="post" th:object="${contacto}" novalidate>
                 
                 <!-- 1. Nombre completo -->
                 <div class="form-group">
                     <label for="nombre" class="form-label">Nombre completo *</label>
-                    <input type="text" id="nombre" class="form-control" placeholder="Ej. Juan Peña">
+                    <input type="text" id="nombre" name="nombre" class="form-control" placeholder="Ej. Juan Peña" th:field="*{nombre}">
                     <span id="errorNombre" class="error-message"></span>
                 </div>
 
                 <!-- 2. Correo electrónico -->
                 <div class="form-group">
                     <label for="correo" class="form-label">Correo electrónico *</label>
-                    <input type="email" id="correo" class="form-control" placeholder="ejemplo@correo.com">
+                    <input type="email" id="correo" name="correo" class="form-control" placeholder="ejemplo@correo.com" th:field="*{correo}">
                     <span id="errorCorreo" class="error-message"></span>
                 </div>
 
                 <!-- 3. Teléfono -->
                 <div class="form-group">
                     <label for="telefono" class="form-label">Teléfono *</label>
-                    <input type="tel" id="telefono" class="form-control" placeholder="3001234567">
+                    <input type="tel" id="telefono" name="telefono" class="form-control" placeholder="3001234567" th:field="*{telefono}">
                     <span id="errorTelefono" class="error-message"></span>
                 </div>
 
                 <!-- 4. Asunto -->
                 <div class="form-group">
                     <label for="asunto" class="form-label">Asunto o motivo *</label>
-                    <select id="asunto" class="form-select">
-                        <option value="" selected disabled>Seleccione una opción</option>
+                    <select id="asunto" name="asunto" class="form-select" th:field="*{asunto}">
+                        <option value="" disabled>Seleccione una opción</option>
                         <option value="soporte">Soporte Técnico</option>
                         <option value="documentacion">Dudas de Documentación</option>
                         <option value="sugerencia">Sugerencias de Mejora</option>
@@ -52,7 +52,7 @@
                 <!-- 5. Mensaje -->
                 <div class="form-group">
                     <label for="mensaje" class="form-label">Mensaje *</label>
-                    <textarea id="mensaje" class="form-control" placeholder="Escribe tu mensaje aquí..."></textarea>
+                    <textarea id="mensaje" name="mensaje" class="form-control" placeholder="Escribe tu mensaje aquí..." th:field="*{mensaje}"></textarea>
                     <div class="form-footer-message">
                         <span id="errorMensaje" class="error-message"></span>
                         <span id="contadorMensaje" class="char-counter">Hacen falta 20 caracteres</span>
@@ -63,7 +63,7 @@
                 <button type="submit" class="btn-submit">Enviar Mensaje</button>
                 
                 <!-- Mensaje de confirmación -->
-                <div id="mensajeExito" class="alert-success hidden">
+                <div id="mensajeExito" class="alert-success hidden" th:classappend="${formEnviado} ? '' : ' hidden'" th:text="${successText} ?: '¡El formulario es válido y está listo para ser enviado!'">
                     ¡El formulario es válido y está listo para ser enviado!
                 </div>
 
