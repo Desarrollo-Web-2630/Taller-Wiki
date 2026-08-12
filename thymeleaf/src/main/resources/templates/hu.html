@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wiki — Sistema de Gestión de Procesos</title>
+    <link rel="stylesheet" th:href="@{/css/styles.css}">
+</head>
+<body>
+
+    <!-- Navegación Base -->
+    <header class="main-header">
+        <nav class="navbar container">
+            <a class="navbar-brand" th:href="@{/}">Wiki Procesos</a>
+            <ul class="nav-links">
+                <li><a class="nav-link" th:href="@{/}">Inicio</a></li>
+                <li><a class="nav-link" th:href="@{/wiki/arquitectura}">Arquitectura</a></li>
+                <li><a class="nav-link active" th:href="@{/wiki/historias-usuario}">Historias de Usuario</a></li>
+                <li><a class="nav-link" th:href="@{/wiki/entregas}">Entregas</a></li>
+                <li><a class="nav-link" th:href="@{/contacto}">Contacto</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <p>Esta es la pagina para la documentacion de Historias de Usuario</p>
+
+</body>
+</html>
