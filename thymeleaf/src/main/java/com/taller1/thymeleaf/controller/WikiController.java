@@ -10,4 +10,9 @@ public class WikiController {
     public String inicio() {
         return "index";
     }
+
+    @GetMapping("/MVC")
+    public String mvc() {
+        return "mvc";
+    }
 }
