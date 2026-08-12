@@ -1,37 +1,36 @@
 <!doctype html>
-<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Visor Procesos - Wiki</title>
-    <link href="css/wiki.css" rel="stylesheet" />
+    <link href="/css/scrollbar.css" rel="stylesheet" />
+    <link href="/css/navbar.css" rel="stylesheet" />
+    <link href="/css/sidebar.css" rel="stylesheet" />
+    <link href="/css/content.css" rel="stylesheet" />
+    <link href="/css/toc.css" rel="stylesheet" />
+    <link href="/css/wiki.css" rel="stylesheet" />
   </head>
   <body>
-    <h2>Wiki</h2>
-    <div id="content">
-      <aside>
+    <div th:replace="~{fragments/navbar :: navbar}"></div>
+
+    <div class="wiki-layout">
+      <div th:replace="~{fragments/sidebar :: sidebar(${navigation})}"></div>
+
+      <main class="wiki-content" th:if="${content != null}">
+        <h1 th:text="${entry?.title} ?: 'Wiki'">Wiki</h1>
+        <div th:utext="${content}">Article content</div>
+      </main>
+
+      <aside class="wiki-toc" th:if="${toc != null and !toc.isEmpty()}">
+        <h4>En esta pagina</h4>
         <ul>
-          <li>Procesos</li>
-          <li>Actividades</li>
-          <li>Arcos</li>
-          <li>Gateways</li>
-          <li>Roles</li>
-          <li>Contáctenos</li>
+          <li th:each="item : ${toc}"
+              th:class="${item.level == 3} ? 'toc-h3' : 'toc-h2'">
+            <a th:href="'#' + ${item.id}" th:text="${item.text}">Heading</a>
+          </li>
         </ul>
       </aside>
-      <section class="information">
-        <p>
-        <h1>Wiki Gestor de procesos</h1>
-          lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do
-          eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad
-          minim veniam, quis nostrud exercitation ullamco laboris nisi ut
-          aliquip ex ea commodo consequat. Duis aute irure dolor in
-          reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla
-          pariatur. Excepteur sint occaecat cupidatat non proident, sunt in
-          culpa qui officia deserunt mollit anim id est laborum.
-        </p>
-      </section>
-      <nav>ola</nav>
     </div>
   </body>
 </html>
