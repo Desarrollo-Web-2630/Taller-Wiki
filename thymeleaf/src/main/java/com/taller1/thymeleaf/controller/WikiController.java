@@ -10,4 +10,9 @@ public class WikiController {
     public String inicio() {
         return "index";
     }
+
+    @GetMapping("/HU")
+    public String hu() {
+        return "hu";
+    }
 }
