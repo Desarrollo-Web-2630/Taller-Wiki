@@ -1,0 +1,19 @@
+### OpenCode ###
+.opencode/
+.agents/
+skills-lock.json
+
+### H2 Database ###
+*.mv.db
+*.trace.db
+
+### OS ###
+.DS_Store
+Thumbs.db
+
+### Logs ###
+*.log
+
+### Env ###
+.env
+.env.*

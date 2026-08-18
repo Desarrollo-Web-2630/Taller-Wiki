@@ -1,0 +1,13 @@
+target/
+.git
+.gitignore
+.vscode/
+.idea/
+*.iml
+*.iws
+*.ipr
+.DS_Store
+Thumbs.db
+*.log
+.env
+.env.*
