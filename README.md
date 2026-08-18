@@ -34,7 +34,7 @@ src/main/resources/
 5. **Contacto (`/contacto`):** Formulario con validaciones en JS.
 
 
-## 📝 Formulario de Contáctenos
+## Formulario de Contáctenos
 
 | Campo | Validaciones en JS |
 | :--- | :--- |
