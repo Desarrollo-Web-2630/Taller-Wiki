@@ -4,26 +4,23 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Wiki — Sistema de Gestión de Procesos</title>
-    <!-- Estilos de Bootstrap 5 para maquetado rápido -->
-    <link
-      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
-      rel="stylesheet"
-    />
+    <!-- Estilos: usar paleta de la Wiki -->
+    <link href="/css/wiki.css" rel="stylesheet" />
+    <link href="/css/navbar.css" rel="stylesheet" />
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
   </head>
-  <body class="bg-light">
-    <!-- Navegación Base -->
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4">
-      <div class="container">
-        <a class="navbar-brand fw-bold" href="/">Visor de procesos</a>
-        <div class="navbar-nav">
-          <a class="nav-link active" href="/">Inicio</a>
-          <a class="nav-link" href="/wiki/arquitectura">Arquitectura</a>
-          <a class="nav-link" href="/wiki/historias-usuario"
-            >Historias de Usuario</a
-          >
-          <a class="nav-link" href="/wiki/entregas">Entregas</a>
-          <a class="nav-link" href="/contacto">Contacto</a>
-          <a class="nav-link" href="/wiki/inicio">Wiki</a>
+  <body>
+    <!-- Navegación Base (estilos de wiki.css/navbar.css) -->
+    <nav class="navbar">
+      <div class="navbar-inner container">
+        <a class="navbar-brand" href="/">Visor de procesos</a>
+        <div class="navbar-links">
+          <a class="active" href="/">Inicio</a>
+          <a href="/wiki/arquitectura">Arquitectura</a>
+          <a href="/wiki/historias-usuario">Historias de Usuario</a>
+          <a href="/wiki/entregas">Entregas</a>
+          <a href="/contacto">Contacto</a>
+          <a href="/wiki/inicio">Wiki</a>
         </div>
       </div>
     </nav>
@@ -44,7 +41,7 @@
             <div class="col-md-6">
               <div class="card h-100 border-0 bg-light">
                 <div class="card-body">
-                  <h5 class="card-title fw-bold">🏗️ Arquitectura MVC</h5>
+                  <h5 class="card-title fw-bold">Arquitectura MVC</h5>
                   <p class="card-text">
                     Consulta la distribución de controladores, modelos y la
                     estrategia de aislamiento de información por organización.
@@ -60,7 +57,7 @@
             <div class="col-md-6">
               <div class="card h-100 border-0 bg-light">
                 <div class="card-body">
-                  <h5 class="card-title fw-bold">📋 Historias de Usuario</h5>
+                  <h5 class="card-title fw-bold">Historias de Usuario</h5>
                   <p class="card-text">
                     Explora las 20 historias de usuario (HU-01 a HU-20)
                     detalladas para la gestión de procesos, actividades, arcos,
