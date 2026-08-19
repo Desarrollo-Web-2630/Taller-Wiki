@@ -51,7 +51,7 @@ Este proyecto está preparado para ejecutarse en un contenedor Docker, conforme 
 ### 1) Construir la imagen
 
 ```bash
-cd /home/rebk827/Documentos/Taller-Wiki
+cd /Taller-Wiki
 
 docker build -t taller-wiki ./thymeleaf
 ```
