@@ -240,3 +240,33 @@ body {
   }
 }
 
+
+/* Paginas sin tabla de contenidos (buscador e indices de categorias) */
+.wiki-layout--no-toc {
+  grid-template-columns: 260px minmax(0, 1fr);
+}
+
+/*
+ * Mismo punto de corte que el resto del layout. La barra deja de ser fija
+ * (ver navbar.css) porque al añadir el buscador su altura pasa a ser variable
+ * y una barra fija de altura fija recortaria el contenido.
+ */
+@media (max-width: 980px) {
+  body {
+    padding-top: 0;
+  }
+
+  .wiki-layout--no-toc {
+    grid-template-columns: 1fr;
+  }
+
+  .sidebar {
+    position: static;
+    height: auto;
+    top: auto;
+  }
+
+  .wiki-content {
+    padding: 24px 16px;
+  }
+}

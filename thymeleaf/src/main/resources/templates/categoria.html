@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title th:text="${category != null} ? ${category.name} + ' - Categorías - Wiki' : 'Categoría no encontrada - Wiki'">Categoría - Wiki</title>
+    <link href="/css/scrollbar.css" rel="stylesheet" />
+    <link href="/css/navbar.css" rel="stylesheet" />
+    <link href="/css/sidebar.css" rel="stylesheet" />
+    <link href="/css/content.css" rel="stylesheet" />
+    <link href="/css/wiki.css" rel="stylesheet" />
+    <link href="/css/search.css" rel="stylesheet" />
+    <link href="/css/categories.css" rel="stylesheet" />
+  </head>
+  <body>
+    <div th:replace="~{fragments/navbar :: navbar}"></div>
+
+    <div class="wiki-layout wiki-layout--no-toc">
+      <div th:replace="~{fragments/sidebar :: sidebar(${navigation})}"></div>
+
+      <main class="wiki-content">
+        <!-- Categoría inexistente -->
+        <div th:if="${category == null}">
+          <h1>Categoría no encontrada</h1>
+          <p>
+            No existe ninguna categoría con el identificador
+            <code th:text="${slug}">slug</code>.
+            Vuelve al <a href="/wiki/categorias">índice de categorías</a>.
+          </p>
+        </div>
+
+        <!-- Categoría existente -->
+        <div th:if="${category != null}">
+          <nav class="breadcrumb" aria-label="Ruta de navegación">
+            <a href="/wiki/categorias">Categorías</a>
+            <span aria-hidden="true">/</span>
+            <span th:text="${category.name}">Categoría</span>
+          </nav>
+
+          <h1 class="category-title"
+              th:style="'--tag-color:' + ${category.color != null ? category.color : '#64748b'}">
+            <span class="category-title-dot" aria-hidden="true"></span>
+            <span th:text="${category.name}">Categoría</span>
+          </h1>
+
+          <p th:if="${category.description != null}" th:text="${category.description}">Descripción</p>
+
+          <p class="search-summary">
+            <strong th:text="${#lists.size(entries)}">0</strong>
+            <span th:text="${#lists.size(entries) == 1} ? ' entrada etiquetada' : ' entradas etiquetadas'"> entradas etiquetadas</span>
+          </p>
+
+          <ul class="entry-list" th:if="${!entries.isEmpty()}">
+            <li class="entry-item" th:each="entry : ${entries}">
+              <a class="entry-item-title" th:href="${entry.url}" th:text="${entry.title}">Entrada</a>
+              <span class="entry-item-url" th:text="${entry.url}">/wiki/...</span>
+              <div th:replace="~{fragments/etiquetas :: etiquetas(${entry.categories})}"></div>
+            </li>
+          </ul>
+
+          <p class="search-empty" th:if="${entries.isEmpty()}">
+            Todavía no hay entradas etiquetadas con esta categoría.
+          </p>
+        </div>
+      </main>
+    </div>
+
+    <script src="/js/buscador.js" defer></script>
+  </body>
+</html>

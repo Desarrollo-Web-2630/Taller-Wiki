@@ -4,12 +4,16 @@
 <nav th:fragment="navbar" class="navbar">
   <div class="navbar-inner">
     <a class="navbar-brand" href="/" aria-label="Ir al inicio">Wiki Procesos</a>
+
+    <div th:replace="~{fragments/buscador :: buscador('nav')}"></div>
+
     <div class="navbar-links">
       <a href="/">Inicio</a>
       <a href="/wiki/inicio">Wiki</a>
       <a href="/wiki/arquitectura">Arquitectura</a>
       <a href="/wiki/historias-usuario">Historias</a>
       <a href="/wiki/entregas">Entregas</a>
+      <a href="/wiki/categorias">Categorías</a>
       <a href="/contacto">Contacto</a>
     </div>
   </div>

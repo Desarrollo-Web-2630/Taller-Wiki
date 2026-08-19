@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+
+<!--
+  fragments/etiquetas.html
+  Lista de etiquetas de una entrada. Cada etiqueta enlaza con su categoria y
+  toma el color definido en la tabla category.
+-->
+
+<div th:fragment="etiquetas(categories)" class="tag-list" th:if="${categories != null and !categories.isEmpty()}">
+  <a th:each="category : ${categories}"
+     class="tag"
+     th:href="@{'/wiki/categorias/' + ${category.slug}}"
+     th:style="'--tag-color:' + ${category.color != null ? category.color : '#64748b'}"
+     th:text="${category.name}"
+     th:title="${category.description}">Etiqueta</a>
+</div>
+
+</html>
