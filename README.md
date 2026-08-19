@@ -12,10 +12,15 @@ Aplicación web server-side en **Spring Boot** y **Thymeleaf** que actúa como p
 
 ```text
 src/main/resources/
-├── static/           # CSS, JS de validaciones, imágenes
+├── data.sql          # Entradas de la wiki, categorías y sus relaciones
+├── static/
+│   ├── css/          # Estilos (incluye search.css y categories.css)
+│   └── js/           # Validaciones del formulario y buscador.js
 └── templates/
-    ├── fragments/    # Header, footer, navbar
-    ├── wiki/         # Inicio, arquitectura, historias-usuario, entregas
+    ├── fragments/    # navbar, sidebar, buscador, etiquetas
+    ├── wiki/         # Contenido de cada entrada (inicio, arquitectura, HU-01…HU-20)
+    ├── busqueda.html # Resultados del buscador
+    ├── categorias.html / categoria.html
     └── contacto.html # Formulario de contacto
 ```
 
@@ -32,6 +37,44 @@ src/main/resources/
    * **Roles:** HU-17 (Crear), HU-18 (Editar), HU-19 (Eliminar), HU-20 (Consultar).
 4. **Roadmap (`/wiki/entregas`):** Entrega 1 (14/09 - 15%), Entrega 2 (21/10 - 25%), Entrega Final (25/11 - 20%).
 5. **Contacto (`/contacto`):** Formulario con validaciones en JS.
+
+
+## Buscador
+
+Busca sobre el **título**, las **etiquetas** y el **contenido completo** de cada entrada.
+
+| Ruta | Descripción |
+| :--- | :--- |
+| `/wiki/buscar?q=texto` | Página de resultados. |
+| `/wiki/buscar?q=texto&categoria=slug` | Resultados acotados a una categoría. |
+| `/api/wiki/sugerencias?q=texto` | JSON con las sugerencias del autocompletado. |
+
+Características:
+
+* **Ignora mayúsculas y tildes** en ambos sentidos: `autenticacion` encuentra *Autenticación* y viceversa.
+* **Fragmento de contexto** con los términos resaltados (`<mark>`), no solo el título.
+* **Orden por relevancia**: el título y las etiquetas pesan más que el cuerpo del artículo.
+* **Varios términos**: primero exige que aparezcan todos y, si no hay nada, admite coincidencias parciales.
+* **Autocompletado en vivo** en la barra superior, con navegación por teclado (`↑` `↓` `Enter` `Esc`).
+* **Funciona sin JavaScript**: la caja es un formulario `GET` normal; el autocompletado es una mejora encima.
+
+La consulta se escapa antes de resaltarla, de modo que el único HTML que llega a la vista es la etiqueta `<mark>`.
+
+## Sistema de etiquetas / categorías
+
+Cada entrada puede llevar varias etiquetas (relación *muchos a muchos* entre `WikiEntry` y `Category`).
+
+| Ruta | Descripción |
+| :--- | :--- |
+| `/wiki/categorias` | Índice con todas las categorías y su número de entradas. |
+| `/wiki/categorias/{slug}` | Entradas etiquetadas con esa categoría. |
+
+* Las etiquetas se muestran bajo el título de cada artículo y en cada resultado de búsqueda.
+* Cada categoría tiene su propio color, definido en la tabla `category`.
+* Desde el buscador se puede filtrar por categoría sin perder el término buscado.
+
+Categorías incluidas: Arquitectura, Autenticación, Procesos, Actividades, Arcos, Gateways, Roles,
+Historias de Usuario, CRUD y Gestión del proyecto.
 
 
 ## Formulario de Contáctenos
