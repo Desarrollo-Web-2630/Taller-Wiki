@@ -4,85 +4,60 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Wiki — Sistema de Gestión de Procesos</title>
-    <!-- Estilos: usar paleta de la Wiki -->
     <link href="/css/wiki.css" rel="stylesheet" />
     <link href="/css/navbar.css" rel="stylesheet" />
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <link href="/css/sidebar.css" rel="stylesheet" />
+    <link href="/css/content.css" rel="stylesheet" />
   </head>
-  <body>
-    <!-- Navegación Base (estilos de wiki.css/navbar.css) -->
-    <nav class="navbar">
-      <div class="navbar-inner container">
-        <a class="navbar-brand" href="/">Visor de procesos</a>
-        <div class="navbar-links">
-          <a class="active" href="/">Inicio</a>
-          <a href="/wiki/arquitectura">Arquitectura</a>
-          <a href="/wiki/historias-usuario">Historias de Usuario</a>
-          <a href="/wiki/entregas">Entregas</a>
-          <a href="/contacto">Contacto</a>
-          <a href="/wiki/inicio">Wiki</a>
-        </div>
-      </div>
-    </nav>
+  <body class="landing-page">
+    <div th:replace="~{fragments/navbar :: navbar}"></div>
 
-    <!-- Contenido Principal -->
-    <main class="container">
-      <div class="p-5 mb-4 bg-white rounded-3 shadow-sm border">
-        <div class="container-fluid py-2">
-          <h1 class="display-5 fw-bold text-primary">
-            Sistema de Gestión de Procesos Empresariales
-          </h1>
-          <p class="col-md-10 fs-4 text-muted mt-3">
-            Portal de documentación técnica y arquitectura web del sistema
-            multiempresa.
-          </p>
-          <hr class="my-4" />
-          <div class="row g-4 mt-2">
-            <div class="col-md-6">
-              <div class="card h-100 border-0 bg-light">
-                <div class="card-body">
-                  <h5 class="card-title fw-bold">Arquitectura MVC</h5>
-                  <p class="card-text">
-                    Consulta la distribución de controladores, modelos y la
-                    estrategia de aislamiento de información por organización.
-                  </p>
-                  <a
-                    href="/wiki/arquitectura"
-                    class="btn btn-outline-primary btn-sm"
-                    >Ver Arquitectura</a
-                  >
-                </div>
-              </div>
-            </div>
-            <div class="col-md-6">
-              <div class="card h-100 border-0 bg-light">
-                <div class="card-body">
-                  <h5 class="card-title fw-bold">Historias de Usuario</h5>
-                  <p class="card-text">
-                    Explora las 20 historias de usuario (HU-01 a HU-20)
-                    detalladas para la gestión de procesos, actividades, arcos,
-                    gateways y roles.
-                  </p>
-                  <a
-                    href="/wiki/historias-usuario"
-                    class="btn btn-outline-primary btn-sm"
-                    >Ver Historias</a
-                  >
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </main>
-
-    <!-- Footer Base -->
-    <footer class="text-center text-muted py-4 mt-5 border-top bg-white">
-      <div class="container">
-        <p class="mb-0">
-          Taller Wiki — Desarrollo Web | Spring Boot & Thymeleaf
+    <main class="landing-shell">
+      <section class="hero-panel">
+        <p class="eyebrow">Documentación técnica · Spring Boot · Thymeleaf</p>
+        <h1>Sistema de Gestión de Procesos Empresariales</h1>
+        <p class="lead">
+          Esta aplicación funciona como una wiki documental para exponer la
+          arquitectura, la navegación, las historias de usuario y el roadmap del
+          proyecto multiempresa.
         </p>
-      </div>
-    </footer>
+        <div class="hero-actions">
+          <a href="/wiki/inicio" class="primary-btn">Explorar la wiki</a>
+          <a href="/contacto" class="secondary-btn">Formulario de contacto</a>
+        </div>
+      </section>
+
+      <section class="info-grid">
+        <article class="info-card">
+          <span class="card-badge">Arquitectura</span>
+          <h2>Modelo MVC</h2>
+          <p>
+            Revisa la separación entre controladores, vistas y modelo para mantener
+            una aplicación ordenada, reutilizable y fácil de mantener.
+          </p>
+          <a href="/wiki/arquitectura">Ver arquitectura</a>
+        </article>
+
+        <article class="info-card">
+          <span class="card-badge">Funcionalidad</span>
+          <h2>HUs y navegación</h2>
+          <p>
+            La wiki organiza las historias de usuario desde autenticación hasta
+            roles, con menús y contenido navegable entre secciones.
+          </p>
+          <a href="/wiki/historias-usuario">Ver historias</a>
+        </article>
+
+        <article class="info-card">
+          <span class="card-badge">Entrega</span>
+          <h2>Roadmap</h2>
+          <p>
+            Consulta el plan de entregas, fechas estimadas y la progresión del
+            proyecto durante el semestre académico.
+          </p>
+          <a href="/wiki/entregas">Ver entregas</a>
+        </article>
+      </section>
+    </main>
   </body>
 </html>

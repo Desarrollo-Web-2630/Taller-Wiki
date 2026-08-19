@@ -1,6 +1,7 @@
 document.addEventListener('DOMContentLoaded', () => {
     const form = document.getElementById('contactoForm');
-    
+    if (!form) return;
+
     const fields = {
         nombre: document.getElementById('nombre'),
         correo: document.getElementById('correo'),
@@ -20,36 +21,17 @@ document.addEventListener('DOMContentLoaded', () => {
     const contadorMensaje = document.getElementById('contadorMensaje');
     const mensajeExito = document.getElementById('mensajeExito');
 
-    // Contador en vivo para el mensaje
-    fields.mensaje.addEventListener('input', () => {
-        const length = fields.mensaje.value.length;
-        if (length < 20) {
-            const faltantes = 20 - length;
-            contadorMensaje.textContent = `Hacen falta ${faltantes} caracter${faltantes === 1 ? '' : 'es'}`;
-            contadorMensaje.style.color = "var(--color-error)";
-        } else if (length <= 400) {
-            const restantes = 400 - length;
-            contadorMensaje.textContent = `${restantes} caracteres restantes`;
-            contadorMensaje.style.color = "var(--color-text-muted)";
-        } else {
-            contadorMensaje.textContent = "Has superado el límite de 400 caracteres";
-            contadorMensaje.style.color = "var(--color-error)";
-        }
-        validarCampo('mensaje');
-    });
+    function mostrarError(key, msg) {
+        if (!errors[key]) return;
+        errors[key].textContent = msg;
+        errors[key].style.display = msg ? 'block' : 'none';
+        errors[key].style.color = '#dc2626';
+    }
 
-    // Eventos al escribir en los demás campos
-    Object.keys(fields).forEach(key => {
-        if (key !== 'mensaje') {
-            fields[key].addEventListener('input', () => validarCampo(key));
-        }
-    });
-
-    // Lógica de validación individual
     function validarCampo(key) {
         let esValido = true;
         let msgError = "";
-        const val = fields[key].value.trim();
+        const val = (fields[key]?.value || '').trim();
 
         switch (key) {
             case 'nombre':
@@ -88,7 +70,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 break;
 
             case 'asunto':
-                if (val === "" || val === null) {
+                if (!val || val === "") {
                     msgError = "Seleccione un asunto válido.";
                     esValido = false;
                 }
@@ -108,24 +90,49 @@ document.addEventListener('DOMContentLoaded', () => {
                 break;
         }
 
-        errors[key].textContent = msgError;
+        mostrarError(key, msgError);
         return esValido;
     }
 
-    // Evento Submit
-    form.addEventListener('submit', (e) => {
-        e.preventDefault();
+    if (fields.mensaje) {
+        fields.mensaje.addEventListener('input', () => {
+            const length = fields.mensaje.value.length;
+            if (length < 20) {
+                const faltantes = 20 - length;
+                contadorMensaje.textContent = `Hacen falta ${faltantes} caracter${faltantes === 1 ? '' : 'es'}`;
+                contadorMensaje.style.color = '#dc2626';
+            } else if (length <= 400) {
+                const restantes = 400 - length;
+                contadorMensaje.textContent = `${restantes} caracteres restantes`;
+                contadorMensaje.style.color = '#5f6f86';
+            } else {
+                contadorMensaje.textContent = 'Has superado el límite de 400 caracteres';
+                contadorMensaje.style.color = '#dc2626';
+            }
+            validarCampo('mensaje');
+        });
+    }
 
+    Object.keys(fields).forEach(key => {
+        if (fields[key] && key !== 'mensaje') {
+            fields[key].addEventListener('input', () => validarCampo(key));
+            fields[key].addEventListener('blur', () => validarCampo(key));
+        }
+    });
+
+    form.addEventListener('submit', (e) => {
         let formEsValido = true;
         Object.keys(fields).forEach(key => {
             const valido = validarCampo(key);
             if (!valido) formEsValido = false;
         });
 
-        if (formEsValido) {
-            mensajeExito.classList.remove('hidden');
-        } else {
-            mensajeExito.classList.add('hidden');
+        if (!formEsValido) {
+            e.preventDefault();
+            if (mensajeExito) {
+                mensajeExito.classList.add('hidden');
+            }
+            return false;
         }
     });
 });

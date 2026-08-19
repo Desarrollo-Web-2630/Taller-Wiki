@@ -1,20 +1,28 @@
-<h2>HU-08 Crear Actividad</h2>
+<h2>HU-08 · Crear actividad</h2>
 
-<h3>Descripción</h3>
 <p>
-  <strong>Como</strong> usuario, <strong>quiero</strong> crear una nueva actividad
-  dentro de un proceso, <strong>para</strong> documentar un paso del flujo de
-  trabajo.
+  <strong>Como</strong> usuario autorizado, <strong>quiero</strong> añadir una
+  actividad a un proceso, <strong>para</strong> representar una tarea ejecutada
+  dentro del flujo de trabajo.
+</p>
+
+<h3>Contexto funcional</h3>
+<p>
+  Una actividad representa el trabajo principal del proceso. Se ubica dentro de
+  una lane o rol responsable y define el contenido operativo del escenario BPMN.
 </p>
 
 <h3>Criterios de aceptación</h3>
 <ul>
-  <li>El formulario solicita: nombre de la actividad y descripción.</li>
-  <li>El nombre debe ser único dentro del proceso.</li>
-  <li>La descripción es obligatoria.</li>
-  <li>La actividad se asocia automáticamente al proceso actual.</li>
-  <li>Se muestra en la vista del proceso inmediatamente.</li>
+  <li>Se define nombre y tipo de actividad.</li>
+  <li>La actividad queda asociada a un proceso y a una lane.</li>
+  <li>El nombre debe ser obligatorio y único dentro del proceso.</li>
+  <li>La actividad queda visible en el diagrama en la posición seleccionada.</li>
+  <li>La creación queda registrada en el historial del proceso.</li>
 </ul>
 
-<h3>Estimación</h3>
-<p>2 puntos de historia de usuario.</p>
+<h3>Nota de modelo</h3>
+<p>
+  La actividad no es una persona ni un rol de acceso, sino un elemento del
+  flujo de trabajo que se asocia a un responsable funcional.
+</p>

@@ -1,18 +1,29 @@
-<h2>HU-10 Eliminar Actividad</h2>
+<h2>HU-10 · Eliminar actividad</h2>
 
-<h3>Descripción</h3>
 <p>
-  <strong>Como</strong> usuario, <strong>quiero</strong> eliminar una actividad,
-  <strong>para</strong> remover pasos que ya no forman parte del proceso.
+  <strong>Como</strong> administrador del proceso, <strong>quiero</strong> eliminar
+  una actividad cuando ya no sea necesaria, <strong>para</strong> mantener el modelo
+  coherente con el proceso real.
+</p>
+
+<h3>Contexto funcional</h3>
+<p>
+  La eliminación de una actividad puede afectar los arcos que conectan este
+  elemento con el resto del diagrama. Por eso debe validarse la coherencia antes
+  de confirmar la acción.
 </p>
 
 <h3>Criterios de aceptación</h3>
 <ul>
-  <li>Se muestra un diálogo de confirmación antes de eliminar.</li>
-  <li>Al eliminar, se eliminan también los arcos conectados a la actividad.</li>
-  <li>Se muestra un mensaje de éxito.</li>
-  <li>La actividad desaparece de la vista del proceso.</li>
+  <li>Se solicita confirmación previa a la eliminación.</li>
+  <li>Se eliminan los arcos entrantes y salientes de la actividad.</li>
+  <li>Se alerta si la eliminación deja elementos desconectados o sin flujo.</li>
+  <li>La eliminación es lógica y queda registrada en el historial.</li>
+  <li>Solo los administradores o usuarios con permisos adecuados pueden hacerlo.</li>
 </ul>
 
-<h3>Estimación</h3>
-<p>1 punto de historia de usuario.</p>
+<h3>Nota de validación</h3>
+<p>
+  En BPMN, quitar una actividad puede dejar un flujo roto; por ello el sistema
+  debe advertir al usuario antes de ejecutar la operación.
+</p>
