@@ -103,7 +103,3 @@ docker rm -f taller-wiki 2>/dev/null || true
 docker build -t taller-wiki ./thymeleaf
 docker run --rm -d -p 8080:8080 --name taller-wiki taller-wiki
 ```
-
-> Importante: `localhost` siempre se refiere al equipo donde estás navegando. Dentro del contenedor, `localhost` apunta al propio contenedor, no a tu máquina host. Por eso la aplicación debe abrirse desde `http://localhost:8080` en el navegador del host, mientras que el puerto 8080 se publica con `-p 8080:8080`.
-
-> El taller exige despliegue mediante Docker, por lo que no se recomienda ejecutar la aplicación directamente desde el IDE ni con `mvn spring-boot:run` como forma de entrega final.
