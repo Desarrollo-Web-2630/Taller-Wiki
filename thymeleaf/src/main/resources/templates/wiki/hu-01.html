@@ -1,21 +1,31 @@
-<h2>HU-01 Registro de Empresa</h2>
+<h2>HU-01 · Registro de empresa</h2>
 
-<h3>Descripción</h3>
 <p>
-  <strong>Como</strong> administrador del sistema, <strong>quiero</strong> registrar
-  una nueva empresa en el sistema, <strong>para</strong> que pueda comenzar a
-  utilizar la plataforma de gestión de procesos.
+  <strong>Como</strong> representante de una empresa, <strong>quiero</strong>
+  crear una cuenta empresarial, <strong>para</strong> que mi organización tenga
+  un espacio propio donde administrar sus procesos y usuarios.
+</p>
+
+<h3>Contexto funcional</h3>
+<p>
+  Esta historia define la base del sistema multiempresa. La empresa registrada
+  se convierte en el contenedor principal de usuarios, procesos, roles y
+  configuraciones, y sirve como eje para aislar la información entre
+  organizaciones.
 </p>
 
 <h3>Criterios de aceptación</h3>
 <ul>
-  <li>El formulario solicita: nombre de la empresa, NIT, correo electrónico del administrador y contraseña.</li>
-  <li>El NIT debe ser único en el sistema.</li>
-  <li>El correo electrónico debe tener un formato válido.</li>
-  <li>La contraseña debe tener mínimo 8 caracteres, incluir una mayúscula y un número.</li>
-  <li>Al registrarse, se crea automáticamente un usuario administrador para la empresa.</li>
-  <li>Se muestra un mensaje de confirmación exitoso.</li>
+  <li>Se solicita nombre de la empresa, identificación fiscal o NIT y correo de contacto.</li>
+  <li>La identificación debe ser única dentro del sistema.</li>
+  <li>Se valida la estructura del correo antes de registrar la empresa.</li>
+  <li>Se crea automáticamente un usuario administrador inicial para la organización.</li>
+  <li>La empresa queda registrada como una entidad independiente y separada del resto.</li>
+  <li>Se muestran mensajes de error cuando faltan datos o el valor no es válido.</li>
 </ul>
 
-<h3>Estimación</h3>
-<p>3 puntos de historia de usuario.</p>
+<h3>Nota de diseño</h3>
+<p>
+  El espacio de cada empresa es independiente: dos organizaciones pueden tener
+  procesos con el mismo nombre sin interferir entre sí.
+</p>

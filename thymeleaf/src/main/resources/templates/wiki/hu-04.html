@@ -1,20 +1,28 @@
-<h2>HU-04 Crear Proceso</h2>
+<h2>HU-04 · Crear proceso</h2>
 
-<h3>Descripción</h3>
 <p>
-  <strong>Como</strong> usuario, <strong>quiero</strong> crear un nuevo proceso
-  dentro de mi empresa, <strong>para</strong> documentar un flujo de trabajo
-  específico.
+  <strong>Como</strong> usuario autorizado, <strong>quiero</strong> crear un proceso,
+  <strong>para</strong> registrar la estructura y el contenido de un flujo de trabajo
+  dentro de la empresa.
+</p>
+
+<h3>Contexto funcional</h3>
+<p>
+  Un proceso es el contenedor principal del diagrama BPMN. Al crearlo, se abre la
+  base para luego añadir actividades, eventos, arcos, gateways y roles.
 </p>
 
 <h3>Criterios de aceptación</h3>
 <ul>
-  <li>El formulario solicita: nombre del proceso, descripción y categoría.</li>
-  <li>El nombre del proceso debe ser único dentro de la empresa.</li>
-  <li>La descripción es obligatoria y debe tener entre 10 y 500 caracteres.</li>
-  <li>Al crear el proceso, se redirige a la vista de edición del mismo.</li>
-  <li>El proceso aparece inmediatamente en la lista de procesos.</li>
+  <li>Se definen nombre, descripción y estado inicial del proceso.</li>
+  <li>El proceso queda asociado a la empresa del usuario autenticado.</li>
+  <li>El nombre del proceso debe ser único dentro de la organización.</li>
+  <li>La creación deja el proceso listo para ser editado y completado.</li>
+  <li>El proceso aparece inmediatamente en la lista general del usuario.</li>
 </ul>
 
-<h3>Estimación</h3>
-<p>3 puntos de historia de usuario.</p>
+<h3>Nota técnica</h3>
+<p>
+  El crear un proceso no significa construir automáticamente el diagrama completo;
+  la historia define la creación del contenedor y su contexto de negocio.
+</p>

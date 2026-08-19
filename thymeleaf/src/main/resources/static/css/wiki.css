@@ -1,23 +1,242 @@
+:root {
+  --wiki-bg: #f3f6fb;
+  --wiki-surface: #ffffff;
+  --wiki-border: #dfe6f1;
+  --wiki-primary: #1d4ed8;
+  --wiki-primary-dark: #1e3a8a;
+  --wiki-text: #1f2937;
+  --wiki-muted: #5f6f86;
+  --wiki-accent: #e0ecff;
+}
+
 html,
 body {
-  height: 100%;
+  min-height: 100%;
   margin: 0;
   padding: 0;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-  color: #374151;
-  background: #ffffff;
+  color: var(--wiki-text);
+  background: var(--wiki-bg);
 }
 
 body {
+  min-height: 100vh;
   padding-top: 56px;
+  overflow-x: hidden;
+}
+
+* {
+  box-sizing: border-box;
 }
 
 .wiki-layout {
   display: grid;
-  grid-template-columns: 260px 1fr 220px;
+  grid-template-columns: 260px minmax(0, 1fr) 220px;
   min-height: calc(100vh - 56px);
 }
 
 .wiki-toc {
   display: block;
+  padding: 24px 16px 32px;
+  background: #f9fbff;
+  border-left: 1px solid var(--wiki-border);
 }
+
+.wiki-toc h4 {
+  margin-bottom: 12px;
+  color: var(--wiki-primary-dark);
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.wiki-toc ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.wiki-toc li {
+  margin: 6px 0;
+}
+
+.wiki-toc a {
+  color: var(--wiki-muted);
+  text-decoration: none;
+  font-size: 0.9rem;
+}
+
+.wiki-toc a:hover {
+  color: var(--wiki-primary);
+}
+
+.landing-page {
+  background: linear-gradient(180deg, #eef4ff 0%, #f7f9fc 100%);
+}
+
+.landing-shell {
+  max-width: 1200px;
+  margin: 32px auto 48px;
+  padding: 0 20px 64px;
+}
+
+.hero-panel {
+  background: var(--wiki-surface);
+  border: 1px solid var(--wiki-border);
+  border-radius: 18px;
+  padding: 40px 32px;
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.04);
+  margin-bottom: 28px;
+}
+
+.eyebrow {
+  margin: 0 0 12px;
+  color: var(--wiki-primary);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-size: 0.74rem;
+  font-weight: 700;
+}
+
+.hero-panel h1 {
+  margin: 0;
+  font-size: clamp(2rem, 4vw, 3rem);
+  line-height: 1.1;
+  color: var(--wiki-primary-dark);
+}
+
+.lead {
+  max-width: 760px;
+  margin-top: 16px;
+  font-size: 1.05rem;
+  line-height: 1.75;
+  color: var(--wiki-muted);
+}
+
+.hero-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 24px;
+  flex-wrap: wrap;
+}
+
+.primary-btn,
+.secondary-btn,
+.info-card a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  text-decoration: none;
+  font-weight: 600;
+  transition: all 0.2s ease;
+}
+
+.primary-btn {
+  background: var(--wiki-primary);
+  color: #ffffff;
+  padding: 12px 18px;
+}
+
+.primary-btn:hover {
+  background: var(--wiki-primary-dark);
+}
+
+.secondary-btn {
+  background: var(--wiki-accent);
+  color: var(--wiki-primary-dark);
+  padding: 12px 18px;
+  border: 1px solid #cfe0ff;
+}
+
+.secondary-btn:hover {
+  background: #dfeeff;
+}
+
+.info-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 20px;
+}
+
+.info-card {
+  background: var(--wiki-surface);
+  border: 1px solid var(--wiki-border);
+  border-radius: 16px;
+  padding: 24px 20px;
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.04);
+}
+
+.card-badge {
+  display: inline-block;
+  background: var(--wiki-accent);
+  color: var(--wiki-primary-dark);
+  border-radius: 999px;
+  padding: 6px 10px;
+  margin-bottom: 14px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.info-card h2 {
+  margin: 0 0 10px;
+  font-size: 1.2rem;
+  color: var(--wiki-primary-dark);
+}
+
+.info-card p {
+  margin: 0 0 16px;
+  color: var(--wiki-muted);
+  line-height: 1.6;
+}
+
+.info-card a {
+  background: transparent;
+  color: var(--wiki-primary);
+  padding: 8px 12px;
+  border: 1px solid #cfe0ff;
+}
+
+.info-card a:hover {
+  background: var(--wiki-accent);
+  text-decoration: none;
+}
+
+@media (max-width: 980px) {
+  .wiki-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .wiki-toc {
+    border-left: none;
+    border-top: 1px solid var(--wiki-border);
+  }
+}
+
+@media (max-width: 640px) {
+  .landing-shell {
+    padding: 0 14px;
+  }
+
+  .hero-panel {
+    padding: 28px 20px;
+  }
+
+  .navbar-inner {
+    padding: 0 12px;
+  }
+
+  .navbar-links {
+    gap: 4px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+
+  .navbar-links a {
+    padding: 5px 8px;
+    font-size: 0.78rem;
+  }
+}
+

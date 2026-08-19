@@ -7,7 +7,6 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 
 import com.taller1.thymeleaf.service.WikiEntryService;
-import com.taller1.thymeleaf.service.WikiEntryService.ArticleResult;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 
@@ -19,11 +18,12 @@ public class WikiController {
 
     @GetMapping({"/wiki", "/wiki/**"})
     public String wiki(HttpServletRequest request, Model model) {
-        String url = request.getRequestURI();
+        String uri = request.getRequestURI();
+        String fullUrl = request.getRequestURL().toString();
 
-        model.addAttribute("navigation", wikiEntryService.getNavigationTree());
+        model.addAttribute("navigation", wikiEntryService.getNavigationTree(fullUrl));
 
-        wikiEntryService.getArticle(url).ifPresentOrElse(
+        wikiEntryService.getArticle(uri, fullUrl).ifPresentOrElse(
             article -> {
                 model.addAttribute("content", article.getContent());
                 model.addAttribute("toc", article.getToc());

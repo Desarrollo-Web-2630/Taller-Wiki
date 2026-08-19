@@ -27,7 +27,7 @@
         <ul>
           <li th:each="item : ${toc}"
               th:class="${item.level == 3} ? 'toc-h3' : 'toc-h2'">
-            <a th:href="'#' + ${item.id}" th:text="${item.text}">Heading</a>
+            <a th:href="${item.href != null ? item.href : '#' + item.id}" th:text="${item.text}">Heading</a>
           </li>
         </ul>
       </aside>

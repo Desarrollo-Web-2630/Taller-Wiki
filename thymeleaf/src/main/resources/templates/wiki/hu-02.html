@@ -1,20 +1,29 @@
-<h2>HU-02 Registro de Usuarios</h2>
+<h2>HU-02 · Registro de usuario en empresa</h2>
 
-<h3>Descripción</h3>
 <p>
-  <strong>Como</strong> administrador de empresa, <strong>quiero</strong> registrar
-  nuevos usuarios dentro de mi empresa, <strong>para</strong> que puedan acceder
-  al sistema y gestionar procesos.
+  <strong>Como</strong> administrador de empresa, <strong>quiero</strong>
+  gestionar usuarios dentro de mi organización, <strong>para</strong> que cada
+  colaborador acceda al sistema con el nivel de permisos adecuado.
+</p>
+
+<h3>Contexto funcional</h3>
+<p>
+  Un usuario pertenece a una sola empresa y puede tener un rol de acceso dentro
+  de la aplicación. Esta historia define la administración básica de acceso y
+  explica la diferencia entre rol de acceso y rol de proceso.
 </p>
 
 <h3>Criterios de aceptación</h3>
 <ul>
-  <li>El formulario solicita: nombre completo, correo electrónico, teléfono y rol.</li>
-  <li>El correo electrónico debe ser único dentro de la empresa.</li>
-  <li>El rol debe seleccionarse de la lista de roles disponibles en la empresa.</li>
-  <li>Se envía un correo de bienvenida con las credenciales temporales.</li>
-  <li>El usuario nuevo aparece inmediatamente en la lista de usuarios.</li>
+  <li>Se puede crear un usuario con nombre, correo y rol de acceso.</li>
+  <li>Se valida que el correo no esté duplicado dentro de la empresa.</li>
+  <li>El administrador puede asignar roles como administrador, editor o solo lectura.</li>
+  <li>Un usuario puede desactivarse sin eliminar su historial de cambios.</li>
+  <li>Los procesos siguen siendo propiedad de la empresa, no del usuario.</li>
 </ul>
 
-<h3>Estimación</h3>
-<p>2 puntos de historia de usuario.</p>
+<h3>Nota de diseño</h3>
+<p>
+  El rol de acceso define qué puede hacer un usuario en la aplicación; el rol
+  de proceso define la responsabilidad dentro del diagrama BPMN.
+</p>
