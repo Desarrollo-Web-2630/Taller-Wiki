@@ -1,0 +1,44 @@
+<h2>Arquitectura del Sistema</h2>
+<p>
+  El Sistema de Gestión de Procesos Empresariales sigue el patrón
+  <strong>Model-View-Controller (MVC)</strong> con una arquitectura server-side
+  rendida mediante Spring Boot y Thymeleaf.
+</p>
+
+<h3>Componentes principales</h3>
+<h4>Controladores</h4>
+<p>
+  Los controladores gestionan las peticiones HTTP y coordinan el flujo entre
+  vistas. Cada controlador es responsable de un dominio específico del sistema.
+</p>
+
+<h4>Modelo de dominio</h4>
+<p>
+  El modelo define las entidades del sistema: Empresas, Usuarios, Procesos,
+  Actividades, Arcos, Gateways y Roles. Cada entidad está diseñada para
+  operar dentro del contexto de una organización específica.
+</p>
+
+<h4>Vistas</h4>
+<p>
+  Las vistas se renderizan con Thymeleaf, utilizando fragmentos reutilizables
+  para navbar, sidebar y footer. Las plantillas siguen la convención de
+  nombres del proyecto.
+</p>
+
+<h3>Aislamiento multiempresa</h3>
+<p>
+  Cada registro en la base de datos está asociado a una organización. Las
+  consultas filtran automáticamente por organización, garantizando que una
+  empresa nunca pueda acceder a la información de otra.
+</p>
+
+<h3>Flujo de una petición</h3>
+<ol>
+  <li>El usuario realiza una petición HTTP (GET/POST).</li>
+  <li>El controlador correspondiente recibe la petición.</li>
+  <li>Se consulta el modelo de datos filtrando por organización.</li>
+  <li>Se retornan los datos al controlador.</li>
+  <li>El controlador pasan los datos a la vista.</li>
+  <li>Thymeleaf renderiza la respuesta HTML.</li>
+</ol>

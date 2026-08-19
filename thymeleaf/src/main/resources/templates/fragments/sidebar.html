@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+
+<!--
+  fragments/sidebar.html
+  Origen: añadido en el PR "landing" por @Dimich1tri (estructura de árbol para la Wiki).
+  Nota: archivo con fragmento Thymeleaf que genera una navegación jerárquica.
+  Revisar antes del merge si se desea conservar o refactorizar.
+-->
+
+<!-- Sidebar navigation panel -->
+<aside th:fragment="sidebar(navigation)" class="sidebar">
+  <nav class="sidebar-nav">
+    <ul>
+      <li th:each="entry : ${navigation}" th:class="${entry.hasChildren()} ? 'has-children' : ''">
+        <div class="sidebar-item">
+          <a th:if="${entry.url != null}"
+             th:href="${entry.url}"
+             th:text="${entry.title}"
+             th:class="${entry.active} ? 'active' : ''">Title</a>
+          <span th:if="${entry.url == null}"
+                th:text="${entry.title}"
+                th:class="${entry.active} ? 'active' : ''">Title</span>
+          <button th:if="${entry.hasChildren()}"
+                  class="toggle-btn"
+                  th:onclick="|toggleSection(this)|"
+                  aria-label="Toggle section">&#9656;</button>
+        </div>
+        <ul th:if="${entry.hasChildren()}" class="submenu">
+          <li th:each="child : ${entry.children}">
+            <div class="sidebar-item">
+              <a th:if="${child.url != null}"
+                 th:href="${child.url}"
+                 th:text="${child.title}"
+                 th:class="${child.active} ? 'active' : ''">Child</a>
+              <span th:if="${child.url == null}"
+                    th:text="${child.title}"
+                    th:class="${child.active} ? 'active' : ''">Child</span>
+              <button th:if="${child.hasChildren()}"
+                      class="toggle-btn"
+                      th:onclick="|toggleSection(this)|"
+                      aria-label="Toggle section">&#9656;</button>
+            </div>
+            <!-- Level 3: grand-children -->
+            <ul th:if="${child.hasChildren()}" class="submenu">
+              <li th:each="gc : ${child.children}">
+                <div class="sidebar-item">
+                  <a th:if="${gc.url != null}"
+                     th:href="${gc.url}"
+                     th:text="${gc.title}"
+                     th:class="${gc.active} ? 'active' : ''">GC</a>
+                  <span th:if="${gc.url == null}"
+                        th:text="${gc.title}"
+                        th:class="${gc.active} ? 'active' : ''">GC</span>
+                </div>
+              </li>
+            </ul>
+          </li>
+        </ul>
+      </li>
+    </ul>
+  </nav>
+  <script th:inline="javascript">
+    function toggleSection(btn) {
+      const li = btn.closest('li');
+      const submenu = li.querySelector('.submenu');
+      if (!submenu) return;
+      const expanded = submenu.style.display !== 'none';
+      submenu.style.display = expanded ? 'none' : 'block';
+      btn.innerHTML = expanded ? '&#9656;' : '&#9662;';
+      btn.setAttribute('aria-expanded', !expanded);
+    }
+    document.addEventListener('DOMContentLoaded', function() {
+      document.querySelectorAll('.submenu').forEach(function(ul) {
+        ul.style.display = 'none';
+      });
+      document.querySelectorAll('.toggle-btn').forEach(function(btn) {
+        btn.innerHTML = '&#9656;';
+      });
+      document.querySelectorAll('.active').forEach(function(el) {
+        let parent = el.closest('.submenu');
+        while (parent) {
+          parent.style.display = 'block';
+          const toggleBtn = parent.previousElementSibling?.querySelector('.toggle-btn');
+          if (toggleBtn) {
+            toggleBtn.innerHTML = '&#9662;';
+            toggleBtn.setAttribute('aria-expanded', 'true');
+          }
+          parent = parent.parentElement?.closest('.submenu');
+        }
+      });
+    });
+  </script>
+</aside>
+
+</html>

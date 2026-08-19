@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Contacto — Wiki Procesos</title>
+
+    <link href="/css/scrollbar.css" rel="stylesheet" />
+    <link href="/css/navbar.css" rel="stylesheet" />
+    <link href="/css/sidebar.css" rel="stylesheet" />
+    <link href="/css/content.css" rel="stylesheet" />
+    <link href="/css/wiki.css" rel="stylesheet" />
+</head>
+<body>
+    <div th:replace="~{fragments/navbar :: navbar}"></div>
+
+    <div class="wiki-layout">
+        <div th:replace="~{fragments/sidebar :: sidebar(${navigation})}"></div>
+
+        <main class="wiki-content">
+            <div class="card-form">
+                <h1>Formulario de Contáctenos</h1>
+                <p>Ingresa tus datos e inquietud respecto a la documentación o el sistema.</p>
+
+                <form id="contactoForm" th:action="@{/contacto}" method="post" th:object="${contacto}" novalidate>
+                    <div class="form-group">
+                        <label for="nombre" class="form-label">Nombre completo *</label>
+                        <input type="text" id="nombre" name="nombre" class="form-control" placeholder="Ej. Juan Peña" th:field="*{nombre}">
+                        <span id="errorNombre" class="error-message" th:if="${#fields.hasErrors('nombre')}" th:errors="*{nombre}"> </span>
+                        <span id="errorNombre" class="error-message" th:unless="${#fields.hasErrors('nombre')}"></span>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="correo" class="form-label">Correo electrónico *</label>
+                        <input type="email" id="correo" name="correo" class="form-control" placeholder="ejemplo@correo.com" th:field="*{correo}">
+                        <span id="errorCorreo" class="error-message" th:if="${#fields.hasErrors('correo')}" th:errors="*{correo}"> </span>
+                        <span id="errorCorreo" class="error-message" th:unless="${#fields.hasErrors('correo')}"></span>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="telefono" class="form-label">Teléfono *</label>
+                        <input type="tel" id="telefono" name="telefono" class="form-control" placeholder="3001234567" th:field="*{telefono}">
+                        <span id="errorTelefono" class="error-message" th:if="${#fields.hasErrors('telefono')}" th:errors="*{telefono}"> </span>
+                        <span id="errorTelefono" class="error-message" th:unless="${#fields.hasErrors('telefono')}"></span>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="asunto" class="form-label">Asunto o motivo *</label>
+                        <select id="asunto" name="asunto" class="form-select" th:field="*{asunto}">
+                            <option value="" disabled>Seleccione una opción</option>
+                            <option value="soporte">Soporte Técnico</option>
+                            <option value="documentacion">Dudas de Documentación</option>
+                            <option value="sugerencia">Sugerencias de Mejora</option>
+                        </select>
+                        <span id="errorAsunto" class="error-message" th:if="${#fields.hasErrors('asunto')}" th:errors="*{asunto}"> </span>
+                        <span id="errorAsunto" class="error-message" th:unless="${#fields.hasErrors('asunto')}"></span>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="mensaje" class="form-label">Mensaje *</label>
+                        <textarea id="mensaje" name="mensaje" class="form-control" placeholder="Escribe tu mensaje aquí..." th:field="*{mensaje}"></textarea>
+                        <div class="form-footer-message">
+                            <span id="errorMensaje" class="error-message" th:if="${#fields.hasErrors('mensaje')}" th:errors="*{mensaje}"> </span>
+                            <span id="errorMensaje" class="error-message" th:unless="${#fields.hasErrors('mensaje')}"></span>
+                            <span id="contadorMensaje" class="char-counter">Hacen falta 20 caracteres</span>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn-submit">Enviar Mensaje</button>
+
+                    <div id="mensajeExito" class="alert-success" th:classappend="${formEnviado} ? '' : ' hidden'" th:if="${formEnviado}">
+                        <p th:text="${successText} ?: '¡El mensaje fue enviado correctamente!'">¡El mensaje fue enviado correctamente!</p>
+                        <a th:href="@{/}" class="btn-home">Volver a la pantalla inicial</a>
+                    </div>
+                </form>
+            </div>
+        </main>
+    </div>
+
+    <script th:src="@{/js/formulario_contacto.js}"></script>
+</body>
+</html>

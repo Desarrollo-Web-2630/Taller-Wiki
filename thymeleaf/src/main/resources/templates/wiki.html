@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Visor Procesos - Wiki</title>
+    <link href="/css/scrollbar.css" rel="stylesheet" />
+    <link href="/css/navbar.css" rel="stylesheet" />
+    <link href="/css/sidebar.css" rel="stylesheet" />
+    <link href="/css/content.css" rel="stylesheet" />
+    <link href="/css/toc.css" rel="stylesheet" />
+    <link href="/css/wiki.css" rel="stylesheet" />
+  </head>
+  <body>
+    <div th:replace="~{fragments/navbar :: navbar}"></div>
+
+    <div class="wiki-layout">
+      <div th:replace="~{fragments/sidebar :: sidebar(${navigation})}"></div>
+
+      <main class="wiki-content" th:if="${content != null}">
+        <h1 th:text="${entry?.title} ?: 'Wiki'">Wiki</h1>
+        <div th:utext="${content}">Article content</div>
+      </main>
+
+      <aside class="wiki-toc" th:if="${toc != null and !toc.isEmpty()}">
+        <h4>En esta pagina</h4>
+        <ul>
+          <li th:each="item : ${toc}"
+              th:class="${item.level == 3} ? 'toc-h3' : 'toc-h2'">
+            <a th:href="${item.href != null ? item.href : '#' + item.id}" th:text="${item.text}">Heading</a>
+          </li>
+        </ul>
+      </aside>
+    </div>
+  </body>
+</html>

@@ -1,0 +1,63 @@
+<!doctype html>
+<html xmlns:th="http://www.thymeleaf.org" lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Wiki — Sistema de Gestión de Procesos</title>
+    <link href="/css/wiki.css" rel="stylesheet" />
+    <link href="/css/navbar.css" rel="stylesheet" />
+    <link href="/css/sidebar.css" rel="stylesheet" />
+    <link href="/css/content.css" rel="stylesheet" />
+  </head>
+  <body class="landing-page">
+    <div th:replace="~{fragments/navbar :: navbar}"></div>
+
+    <main class="landing-shell">
+      <section class="hero-panel">
+        <p class="eyebrow">Documentación técnica · Spring Boot · Thymeleaf</p>
+        <h1>Sistema de Gestión de Procesos Empresariales</h1>
+        <p class="lead">
+          Esta aplicación funciona como una wiki documental para exponer la
+          arquitectura, la navegación, las historias de usuario y el roadmap del
+          proyecto multiempresa.
+        </p>
+        <div class="hero-actions">
+          <a href="/wiki/inicio" class="primary-btn">Explorar la wiki</a>
+          <a href="/contacto" class="secondary-btn">Formulario de contacto</a>
+        </div>
+      </section>
+
+      <section class="info-grid">
+        <article class="info-card">
+          <span class="card-badge">Arquitectura</span>
+          <h2>Modelo MVC</h2>
+          <p>
+            Revisa la separación entre controladores, vistas y modelo para mantener
+            una aplicación ordenada, reutilizable y fácil de mantener.
+          </p>
+          <a href="/wiki/arquitectura">Ver arquitectura</a>
+        </article>
+
+        <article class="info-card">
+          <span class="card-badge">Funcionalidad</span>
+          <h2>HUs y navegación</h2>
+          <p>
+            La wiki organiza las historias de usuario desde autenticación hasta
+            roles, con menús y contenido navegable entre secciones.
+          </p>
+          <a href="/wiki/historias-usuario">Ver historias</a>
+        </article>
+
+        <article class="info-card">
+          <span class="card-badge">Entrega</span>
+          <h2>Roadmap</h2>
+          <p>
+            Consulta el plan de entregas, fechas estimadas y la progresión del
+            proyecto durante el semestre académico.
+          </p>
+          <a href="/wiki/entregas">Ver entregas</a>
+        </article>
+      </section>
+    </main>
+  </body>
+</html>

@@ -1,0 +1,29 @@
+<h2>HU-03 · Inicio de sesión</h2>
+
+<p>
+  <strong>Como</strong> usuario registrado, <strong>quiero</strong> iniciar sesión
+  con mis credenciales, <strong>para</strong> acceder únicamente a la información
+  y las operaciones autorizadas de mi empresa.
+</p>
+
+<h3>Contexto funcional</h3>
+<p>
+  La autenticación es la pieza que define el contexto de negocio del usuario.
+  Después del login, el sistema filtra procesos, permisos y usuarios de la
+  empresa actual, asegurando el aislamiento entre organizaciones.
+</p>
+
+<h3>Criterios de aceptación</h3>
+<ul>
+  <li>Se validan correo y contraseña antes de autorizar el acceso.</li>
+  <li>La contraseña se almacena cifrada y no se expone en texto plano.</li>
+  <li>En caso de credenciales incorrectas, se muestra un mensaje genérico.</li>
+  <li>La sesión debe quedar activa para el usuario autenticado.</li>
+  <li>Al cerrar sesión, se invalida el acceso y se elimina el contexto actual.</li>
+</ul>
+
+<h3>Nota de seguridad</h3>
+<p>
+  Un inicio de sesión fallido no debe revelar si el correo existe o no en la
+  base de datos, evitando filtraciones de información sensible.
+</p>
