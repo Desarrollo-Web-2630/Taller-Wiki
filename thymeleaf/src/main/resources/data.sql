@@ -2,8 +2,8 @@
 INSERT INTO wiki_entry (id, title, url, parent_id, order_index, active, content_path) VALUES (1, 'Inicio', '/wiki/inicio', NULL, 1, false, 'wiki/inicio.html');
 INSERT INTO wiki_entry (id, title, url, parent_id, order_index, active, content_path) VALUES (2, 'Arquitectura', '/wiki/arquitectura', NULL, 2, false, 'wiki/arquitectura.html');
 INSERT INTO wiki_entry (id, title, url, parent_id, order_index, active, content_path) VALUES (3, 'Historias de Usuario', '/wiki/historias-usuario', NULL, 3, false, 'wiki/historias-usuario.html');
-INSERT INTO wiki_entry (id, title, url, parent_id, order_index, active, content_path) VALUES (4, 'Entregas', '/wiki/entregas', NULL, 4, false, 'wiki/entregas.html');
-INSERT INTO wiki_entry (id, title, url, parent_id, order_index, active, content_path) VALUES (5, 'Contacto', '/contacto', NULL, 5, false, 'wiki/contacto.html');
+INSERT INTO wiki_entry (id, title, url, parent_id, order_index, active, content_path) VALUES (4, 'Entregas', '/wiki/entregas', NULL, 5, false, 'wiki/entregas.html');
+INSERT INTO wiki_entry (id, title, url, parent_id, order_index, active, content_path) VALUES (5, 'Contacto', '/contacto', NULL, 6, false, 'wiki/contacto.html');
 
 -- Historias de Usuario - children
 INSERT INTO wiki_entry (id, title, url, parent_id, order_index, active, content_path) VALUES (6,  'Autenticacion', '/wiki/historias-usuario/autenticacion', 3, 1, false, 'wiki/autenticacion.html');
@@ -44,3 +44,9 @@ INSERT INTO wiki_entry (id, title, url, parent_id, order_index, active, content_
 INSERT INTO wiki_entry (id, title, url, parent_id, order_index, active, content_path) VALUES (29, 'HU-18 Editar rol', '/wiki/historias-usuario/hu-18', 11, 2, false, 'wiki/hu-18.html');
 INSERT INTO wiki_entry (id, title, url, parent_id, order_index, active, content_path) VALUES (30, 'HU-19 Eliminar rol', '/wiki/historias-usuario/hu-19', 11, 3, false, 'wiki/hu-19.html');
 INSERT INTO wiki_entry (id, title, url, parent_id, order_index, active, content_path) VALUES (31, 'HU-20 Consultar rol', '/wiki/historias-usuario/hu-20', 11, 4, false, 'wiki/hu-20.html');
+
+-- Documentacion (entrega final): raiz y documentos
+-- order_index sigue la numeracion de los documentos (06, 08...) para poder intercalar los que faltan
+INSERT INTO wiki_entry (id, title, url, parent_id, order_index, active, content_path) VALUES (32, 'Documentación', '/wiki/documentacion', NULL, 4, false, 'wiki/documentacion.html');
+INSERT INTO wiki_entry (id, title, url, parent_id, order_index, active, content_path) VALUES (33, 'Pruebas unitarias y SonarQube', '/wiki/documentacion/pruebas-unitarias-sonarqube', 32, 6, false, 'wiki/pruebas-unitarias-sonarqube.html');
+INSERT INTO wiki_entry (id, title, url, parent_id, order_index, active, content_path) VALUES (34, 'Roles y Seguridad', '/wiki/documentacion/roles-seguridad', 32, 8, false, 'wiki/roles-seguridad.html');

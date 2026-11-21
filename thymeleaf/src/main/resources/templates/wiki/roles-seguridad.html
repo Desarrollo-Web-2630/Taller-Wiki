@@ -1,0 +1,859 @@
+<h2>Ficha del documento</h2>
+<table>
+<thead>
+<tr>
+<th>Dato</th>
+<th>Información</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Institución / asignatura</td>
+<td>Pontificia Universidad Javeriana · Desarrollo Web</td>
+</tr>
+<tr>
+<td>Nombre del proyecto</td>
+<td>Sistema de Gestión de Procesos multiempresa: visor y editor de
+procesos empresariales (BPMN)</td>
+</tr>
+<tr>
+<td>Equipo / integrantes</td>
+<td>Héctor Estrada, Mariana Osorio, Iván Pardo, Sebastián Velásquez</td>
+</tr>
+<tr>
+<td>Docente</td>
+<td>Pablo Márquez</td>
+</tr>
+<tr>
+<td>Fecha / versión</td>
+<td>Versión 1.0 · 17 de noviembre de 2026</td>
+</tr>
+<tr>
+<td>Repositorios</td>
+<td>Backend: <a href="https://github.com/Desarrollo-Web-2630/Proyecto1" target="_blank" rel="noopener">https://github.com/Desarrollo-Web-2630/Proyecto1</a> ·
+Frontend: <a href="https://github.com/Desarrollo-Web-2630/Proyecto2" target="_blank" rel="noopener">https://github.com/Desarrollo-Web-2630/Proyecto2</a></td>
+</tr>
+</tbody>
+</table>
+<h2>1. Alcance de seguridad</h2>
+<p><strong>Objetivo de seguridad del sistema BPMN:</strong> que solo los
+usuarios autenticados de una empresa accedan a la información de esa
+empresa, con las operaciones que permite su rol (ADMIN, EDITOR o
+LECTURA), y que ninguna empresa pueda ver ni modificar los procesos de
+otra. Los controles viven en el backend (Spring Security con JWT); el
+frontend solo adapta la interfaz al rol.</p>
+<p><strong>Activos y datos a proteger:</strong></p>
+<ul>
+<li><strong>Procesos y su diagrama</strong>: pools, lanes,
+actividades, arcos, gateways, mensajes y roles de proceso. Pertenecen a
+la empresa, no al usuario.</li>
+<li><strong>Empresas y usuarios</strong>: nombre, NIT y correo de la
+empresa; nombre, correo, rol y estado de cada usuario.</li>
+<li><strong>Credenciales</strong>: contraseñas (guardadas solo como
+hash BCrypt), JWT de sesión y tokens de verificación de correo.</li>
+<li><strong>Secretos de infraestructura</strong>: clave de firma JWT
+(JWT_SECRET), credenciales de PostgreSQL y token de lectura de
+GHCR.</li>
+<li><strong>Base de datos</strong>: PostgreSQL 16 y su volumen
+persistente en el clúster.</li>
+</ul>
+<p><strong>Usuarios internos y externos:</strong></p>
+<ul>
+<li><strong>Internos</strong>: usuarios de cada empresa con rol
+ADMIN, EDITOR o LECTURA. Cada usuario pertenece a una sola
+empresa.</li>
+<li><strong>Externos</strong>: visitantes sin sesión. Solo pueden
+registrar una empresa, activar su cuenta, iniciar sesión y consultar la
+documentación Swagger.</li>
+<li>Los «participantes externos» del modelo BPMN (clientes,
+proveedores, sistemas) son datos del diagrama, no usuarios del
+sistema.</li>
+</ul>
+<p><strong>Supuestos y restricciones:</strong></p>
+<ul>
+<li>El sistema modela procesos, no los ejecuta: no se conecta a
+servidores de correo, colas ni APIs reales y no guarda secretos de
+integración.</li>
+<li>Multiempresa con una sola base de datos: el aislamiento es
+lógico, por el identificador de empresa que viaja en el token.</li>
+<li>Despliegue académico en una VM Ubuntu 22.04 con MicroK8s dentro
+de la red de la Javeriana, accesible por VPN.</li>
+<li>En el despliegue el envío de correo está deshabilitado: el enlace
+de verificación se registra en el log del backend.</li>
+</ul>
+<h2>2. Identificación de roles</h2>
+<p><strong>Criterios para definir los roles:</strong> se partió de los
+tres perfiles del enunciado (administrador, editor y solo lectura) y del
+principio de mínimo privilegio: cada rol tiene únicamente las
+operaciones que necesita. El rol es un atributo del usuario
+(Usuario.RolAcceso) y aplica solo dentro de su empresa. Estos roles de
+acceso son distintos de los roles de proceso (Analista, Supervisor,
+Auditor), que son elementos del diagrama asignados a las lanes y no
+otorgan permisos en la aplicación.</p>
+<p><strong>Responsabilidades por rol:</strong></p>
+<ul>
+<li><strong>ADMIN</strong>: administra la empresa, sus usuarios y los
+roles de proceso; elimina, inactiva y reactiva procesos; además puede
+todo lo del EDITOR.</li>
+<li><strong>EDITOR</strong>: crea, edita y publica procesos y modela
+su diagrama completo.</li>
+<li><strong>LECTURA</strong>: consulta procesos, diagramas, usuarios
+y roles de su empresa, sin modificar nada.</li>
+</ul>
+<p><strong>Proceso de asignación, modificación y revocación de
+roles:</strong></p>
+<ul>
+<li><strong>Asignación inicial</strong>: al registrar la empresa
+(POST /api/v1/empresas, público) se crea un usuario ADMIN inactivo.
+Recibe un enlace de verificación de un solo uso, válido 24 horas, con el
+que activa la cuenta y define su contraseña.</li>
+<li><strong>Alta de colaboradores</strong>: solo un ADMIN, con POST
+/api/v1/usuarios, asignando rol ADMIN, EDITOR o LECTURA. El usuario
+queda inactivo hasta verificar su correo.</li>
+<li><strong>Modificación</strong>: POST /api/v1/usuarios/{id}/rol,
+solo ADMIN y solo sobre usuarios de su empresa.</li>
+<li><strong>Revocación</strong>: desactivar (POST
+/api/v1/usuarios/{id}/desactivar) o eliminar de forma lógica (DELETE
+/api/v1/usuarios/{id}). El efecto es inmediato: el filtro JWT recarga el
+usuario en cada petición y rechaza a los inactivos aunque su token no
+haya vencido.</li>
+<li>Un administrador no puede cambiar su propio rol, desactivarse ni
+eliminarse, para no dejar la empresa sin administrador por
+error.</li>
+</ul>
+<table>
+<thead>
+<tr>
+<th>Rol</th>
+<th>Descripción</th>
+<th>Responsabilidades</th>
+<th>Acceso permitido</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>ADMIN</td>
+<td>Administrador de la empresa. Se crea al registrar la empresa.</td>
+<td>Gestionar usuarios y roles de acceso, roles de proceso y datos de la
+empresa; eliminar e inactivar procesos.</td>
+<td>Todas las operaciones sobre los datos de su empresa.</td>
+</tr>
+<tr>
+<td>EDITOR</td>
+<td>Colaborador que modela procesos.</td>
+<td>Crear, editar y publicar procesos y todos los elementos del
+diagrama.</td>
+<td>Consultar todo; crear y editar procesos y diagrama. Sin eliminar ni
+administrar.</td>
+</tr>
+<tr>
+<td>LECTURA</td>
+<td>Usuario de consulta.</td>
+<td>Revisar procesos y diagramas publicados o en borrador.</td>
+<td>Solo consultas (GET) dentro de su empresa.</td>
+</tr>
+<tr>
+<td>Visitante (sin sesión)</td>
+<td>Persona que aún no inicia sesión.</td>
+<td>Registrar su empresa y activar su cuenta.</td>
+<td>Login, registro de empresa, activación de cuenta y Swagger. Todo lo
+demás responde 401.</td>
+</tr>
+</tbody>
+</table>
+<h2>3. Matriz de roles y permisos</h2>
+<p>Operaciones reales de la aplicación según las reglas de
+SecurityConfig y las validaciones de los servicios. Todas aplican solo
+sobre datos de la empresa del usuario.</p>
+<table>
+<thead>
+<tr>
+<th>Recurso / operación</th>
+<th>Rol</th>
+<th>Permiso (sí/no)</th>
+<th>Regla o restricción</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Consultar procesos, diagrama, usuarios y roles</td>
+<td>ADMIN, EDITOR, LECTURA</td>
+<td>Sí</td>
+<td>Solo datos de su empresa.</td>
+</tr>
+<tr>
+<td>Crear y editar procesos</td>
+<td>ADMIN, EDITOR</td>
+<td>Sí</td>
+<td>Validación de datos con Spring Validation.</td>
+</tr>
+<tr>
+<td>Crear y editar procesos</td>
+<td>LECTURA</td>
+<td>No</td>
+<td>403 No tiene permisos.</td>
+</tr>
+<tr>
+<td>Publicar proceso (borrador → publicado)</td>
+<td>ADMIN, EDITOR</td>
+<td>Sí</td>
+<td>POST /api/v1/procesos/{id}/publicar.</td>
+</tr>
+<tr>
+<td>Inactivar y reactivar proceso (eliminación lógica)</td>
+<td>ADMIN</td>
+<td>Sí</td>
+<td>EDITOR y LECTURA reciben 403.</td>
+</tr>
+<tr>
+<td>Modelar el diagrama: pools, lanes, actividades, arcos, gateways y
+mensajes</td>
+<td>ADMIN, EDITOR</td>
+<td>Sí</td>
+<td>Reglas de coherencia: arcos dentro de un pool, mensajes entre pools,
+actividades en una lane.</td>
+</tr>
+<tr>
+<td>Eliminar procesos o elementos del diagrama</td>
+<td>ADMIN</td>
+<td>Sí</td>
+<td>Cualquier DELETE de la API exige ADMIN.</td>
+</tr>
+<tr>
+<td>Eliminar procesos o elementos del diagrama</td>
+<td>EDITOR, LECTURA</td>
+<td>No</td>
+<td>403 No tiene permisos.</td>
+</tr>
+<tr>
+<td>Crear, editar y eliminar roles de proceso</td>
+<td>ADMIN</td>
+<td>Sí</td>
+<td>No se puede eliminar un rol en uso por una lane.</td>
+</tr>
+<tr>
+<td>Invitar usuarios, cambiar rol, desactivar o eliminar</td>
+<td>ADMIN</td>
+<td>Sí</td>
+<td>No sobre sí mismo (400).</td>
+</tr>
+<tr>
+<td>Invitar usuarios, cambiar rol, desactivar o eliminar</td>
+<td>EDITOR, LECTURA</td>
+<td>No</td>
+<td>403 No tiene permisos.</td>
+</tr>
+<tr>
+<td>Consultar, editar o eliminar la empresa</td>
+<td>ADMIN</td>
+<td>Sí</td>
+<td>Solo su propia empresa; otra empresa responde 403.</td>
+</tr>
+<tr>
+<td>Registrar empresa</td>
+<td>Visitante</td>
+<td>Sí</td>
+<td>Público; crea el ADMIN inicial inactivo.</td>
+</tr>
+<tr>
+<td>Exportar o compartir procesos con otra empresa</td>
+<td>Todos</td>
+<td>No</td>
+<td>No aplica: no existe exportación ni compartición; cada proceso
+pertenece a una sola empresa.</td>
+</tr>
+</tbody>
+</table>
+<h2>4. Autenticación y gestión de sesiones</h2>
+<p><strong>Mecanismo de inicio de sesión:</strong> correo y contraseña
+en POST /api/auth/login. Spring Security los valida con
+AuthenticationManager, DaoAuthenticationProvider y
+UsuarioDetallesServicio. Si son correctos y la cuenta está activa,
+JwtServicio emite un JWT firmado con HS256 (librería JJWT 0.12.6).</p>
+<ul>
+<li>El token contiene sub (correo), usuarioId, empresaId, rol, fecha
+de emisión y de vencimiento. Nunca contiene la contraseña.</li>
+<li>La respuesta es { token, tipo: "Bearer", expiraEn, usuario }; el
+usuario se devuelve sin contraseña.</li>
+<li>La API es sin estado (SessionCreationPolicy.STATELESS): no crea
+sesión en el servidor ni cookies. Formulario de login y HTTP Basic de
+Spring están deshabilitados.</li>
+</ul>
+<p><strong>Registro y recuperación de cuenta (si aplica):</strong></p>
+<ul>
+<li>Registro público de la empresa con su ADMIN inicial, que activa
+la cuenta por enlace y define su contraseña.</li>
+<li>Tokens de verificación aleatorios (UUID), de un solo uso y con
+vigencia de 24 horas; un token usado o vencido se rechaza.</li>
+<li>El reenvío de verificación se limita a 3 por hora y responde
+siempre el mismo mensaje, para no revelar si un correo está
+registrado.</li>
+<li>La recuperación de contraseña («olvidé mi contraseña») no está
+implementada en esta versión (ver limitaciones).</li>
+</ul>
+<p><strong>Políticas de contraseñas o proveedor de
+identidad:</strong></p>
+<ul>
+<li>Entre 8 y 128 caracteres, con al menos una mayúscula, una
+minúscula y un número. Se valida con Bean Validation en los DTO de
+usuario y de activación de cuenta.</li>
+<li><strong>Almacenamiento</strong>: solo el hash BCrypt
+(BCryptPasswordEncoder); la contraseña nunca se devuelve en las
+respuestas.</li>
+<li>No se usa proveedor de identidad externo: la autenticación es
+propia de la aplicación.</li>
+</ul>
+<p><strong>Expiración y cierre de sesión:</strong></p>
+<ul>
+<li>El JWT vence a los 60 minutos (configurable con
+JWT_EXPIRACION_MINUTOS).</li>
+<li>Angular guarda la fecha de vencimiento y no usa un token vencido:
+cierra la sesión y envía al login.</li>
+<li>Si el backend responde 401, el interceptor cierra la sesión y
+redirige a /login?expirada=true con el aviso «Tu sesión
+venció».</li>
+<li>Cerrar sesión borra el token de sessionStorage; también se pierde
+al cerrar la pestaña.</li>
+</ul>
+<p><strong>Protección de credenciales y tokens:</strong></p>
+<ul>
+<li>La clave de firma (JWT_SECRET, mínimo 32 caracteres) se lee de
+una variable de entorno que en Kubernetes viene de un Secret; nunca está
+en el código. Si falta, se genera una clave temporal al
+arrancar.</li>
+<li>El token solo viaja en el encabezado Authorization: Bearer: nunca
+en la URL ni en cookies.</li>
+<li>El login responde el mismo mensaje si el correo no existe, la
+contraseña es incorrecta o la cuenta está inactiva.</li>
+<li>Los logs no registran contraseñas ni tokens de sesión, y los
+datos que escriben pasan por sanitizarParaLog.</li>
+</ul>
+<h2>5. Autorización y protección del Backend</h2>
+<p><strong>Verificación de permisos en cada endpoint:</strong> dos capas
+que se aplican a todas las peticiones:</p>
+<ul>
+<li><strong>Reglas por ruta, método y rol</strong> en SecurityConfig
+(SecurityFilterChain): GET permitido a cualquier usuario autenticado;
+DELETE, usuarios, empresa, roles de proceso e inactivar o reactivar
+procesos solo ADMIN; el resto de escrituras ADMIN o EDITOR. Lo que no
+está declarado exige autenticación
+(anyRequest().authenticated()).</li>
+<li><strong>Aislamiento por empresa</strong>: EmpresaActual.id() toma
+la empresa del token ya validado y los servicios filtran cada consulta y
+operación por ella. El encabezado X-Empresa-Id de versiones anteriores
+se ignora.</li>
+</ul>
+<p><strong>Control de acceso a procesos BPMN propios y
+compartidos:</strong> los procesos pertenecen a la empresa, no a un
+usuario: cualquier usuario de la empresa los ve, y los modifica según su
+rol. No existe compartir procesos entre empresas. Cada operación sobre
+un proceso o un elemento del diagrama comprueba que pertenezca a la
+empresa del token; si es de otra empresa, la petición se rechaza sin
+devolver datos.</p>
+<p><strong>Respuesta ante acceso no autorizado (401/403):</strong>
+respuestas JSON con el mismo formato { timestamp, status, mensaje },
+desde ManejadorErroresSeguridad (en el filtro) y GlobalExceptionHandler
+(en los controladores).</p>
+<ul>
+<li><strong>401</strong>: «Debe iniciar sesion para acceder a este
+recurso» (sin token, token alterado o vencido, usuario
+inactivo).</li>
+<li><strong>403</strong>: «No tiene permisos para realizar esta
+accion» (rol insuficiente o empresa ajena).</li>
+<li>Los errores 500 no exponen trazas ni detalles internos.</li>
+</ul>
+<p><strong>Validación de entradas y archivos BPMN/XML:</strong></p>
+<ul>
+<li>La aplicación no importa ni exporta archivos BPMN/XML: el
+diagrama se construye por la API con JSON, por lo que no hay
+procesamiento de XML expuesto (ni riesgo de XXE).</li>
+<li>Todas las entradas pasan por Spring Validation (@Valid,
+@NotBlank, @Size, @Pattern, @Email) y los errores responden 400 con un
+mensaje claro.</li>
+<li>Los servicios validan la coherencia del diagrama: arcos sin
+cruzar pools, mensajes solo entre pools y roles en uso que no se pueden
+eliminar.</li>
+<li>El acceso a datos usa JPA y JPQL con parámetros, sin concatenar
+SQL, lo que previene la inyección SQL.</li>
+</ul>
+<p><strong>Configuración de CORS y limitación de solicitudes (si
+aplica):</strong></p>
+<ul>
+<li><strong>CORS</strong>: CorsConfigurationSource para /api/** con
+los orígenes de APP_CORS_ORIGENES, métodos GET, POST, PUT, PATCH, DELETE
+y OPTIONS, y solo los encabezados Authorization y Content-Type. En el
+despliegue, frontend y API comparten origen a través del
+Ingress.</li>
+<li><strong>Limitación de solicitudes</strong>: solo el reenvío de
+verificación (3 por hora). No hay limitación general ni bloqueo por
+intentos de login (ver limitaciones).</li>
+</ul>
+<table>
+<thead>
+<tr>
+<th>Endpoint / acción</th>
+<th>Rol autorizado</th>
+<th>Control implementado</th>
+<th>Evidencia</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>POST /api/auth/login</td>
+<td>Público</td>
+<td>AuthenticationManager + BCrypt; 401 genérico; emite JWT</td>
+<td>login_correcto_devuelveTokenYDatosDelUsuario,
+login_conClaveIncorrecta_responde401</td>
+</tr>
+<tr>
+<td>GET /api/auth/yo</td>
+<td>Autenticado</td>
+<td>authenticated()</td>
+<td>yo_conToken_devuelveElUsuarioDelToken</td>
+</tr>
+<tr>
+<td>POST /api/v1/empresas</td>
+<td>Público</td>
+<td>permitAll() + Bean Validation</td>
+<td>registroDeEmpresa_esPublico</td>
+</tr>
+<tr>
+<td>GET /api/v1/**</td>
+<td>ADMIN, EDITOR, LECTURA</td>
+<td>authenticated() + filtro por empresa</td>
+<td>lectura_puedeConsultarProcesos, sinToken_responde401</td>
+</tr>
+<tr>
+<td>POST/PUT /api/v1/procesos/** y elementos del diagrama</td>
+<td>ADMIN, EDITOR</td>
+<td>hasAnyRole(ADMIN, EDITOR)</td>
+<td>editor_puedeCrearProcesos_responde201,
+lectura_noPuedeCrearProcesos_responde403</td>
+</tr>
+<tr>
+<td>DELETE /api/v1/**</td>
+<td>ADMIN</td>
+<td>hasRole(ADMIN)</td>
+<td>admin_puedeEliminarProcesos_responde204,
+editor_noPuedeEliminarProcesos_responde403</td>
+</tr>
+<tr>
+<td>POST /api/v1/procesos/{id}/inactivar y /reactivar</td>
+<td>ADMIN</td>
+<td>hasRole(ADMIN)</td>
+<td>Regla en SecurityConfig</td>
+</tr>
+<tr>
+<td>/api/v1/usuarios/** (escritura)</td>
+<td>ADMIN</td>
+<td>hasRole(ADMIN) + no sobre sí mismo</td>
+<td>editor_noPuedeCrearUsuarios_responde403,
+eliminar_suPropiaCuenta_devuelve400SinLlamarAlService</td>
+</tr>
+<tr>
+<td>/api/v1/empresas/{id}</td>
+<td>ADMIN de esa empresa</td>
+<td>hasRole(ADMIN) + verificarPropia(id)</td>
+<td>adminDeOtraEmpresa_noPuedeVerLaEmpresaAjena_responde403</td>
+</tr>
+<tr>
+<td>/api/v1/roles-proceso/** (escritura)</td>
+<td>ADMIN</td>
+<td>hasRole(ADMIN)</td>
+<td>Regla en SecurityConfig</td>
+</tr>
+<tr>
+<td>/swagger-ui/**, /v3/api-docs</td>
+<td>Público</td>
+<td>permitAll()</td>
+<td>documentacionSwagger_esPublica</td>
+</tr>
+<tr>
+<td>/api/v1/debug/**</td>
+<td>ADMIN</td>
+<td>hasRole(ADMIN); solo existe en perfiles de desarrollo
+(@Profile)</td>
+<td>No se carga en el despliegue</td>
+</tr>
+</tbody>
+</table>
+<h2>6. Seguridad del Frontend y de los datos</h2>
+<p><strong>Restricción de funciones visibles según rol (sin sustituir
+controles del servidor):</strong></p>
+<ul>
+<li>authGuard (con canActivate y canActivateChild) protege todas las
+pantallas internas: sin sesión vigente envía a /login.</li>
+<li>rolGuard('ADMIN') en crear usuarios y crear o editar roles de
+proceso; rolGuard('ADMIN', 'EDITOR') en crear o editar procesos y
+actividades.</li>
+<li>invitadoGuard en la página de inicio, login y registro: quien ya
+tiene sesión va a /procesos.</li>
+<li>Los componentes ocultan los botones de edición o eliminación
+según el rol.</li>
+<li>Esto es solo usabilidad: si alguien fuerza la URL o llama la API
+directamente, el backend responde 403.</li>
+</ul>
+<p><strong>Protección contra XSS y CSRF (según
+arquitectura):</strong></p>
+<ul>
+<li><strong>XSS</strong>: Angular escapa por defecto todo lo que se
+muestra; el código no usa innerHTML ni bypassSecurityTrust. nginx agrega
+X-Content-Type-Options: nosniff, X-Frame-Options: DENY (evita
+clickjacking) y Referrer-Policy: no-referrer.</li>
+<li><strong>CSRF</strong>: deshabilitado de forma justificada. La API
+no usa cookies ni sesión, y la credencial viaja solo en el encabezado
+Authorization, que el navegador nunca envía por su cuenta desde otro
+sitio. Se comprobó con 3 pruebas (csrf_*). SonarQube lo marcó (regla
+java:S4502) y se revisó y aceptó con esta justificación (documento
+Pruebas unitarias y SonarQube, hallazgo H-05).</li>
+</ul>
+<p><strong>Uso de HTTPS y manejo de datos sensibles:</strong></p>
+<ul>
+<li>El despliegue actual sirve HTTP dentro de la red interna de la
+universidad (VM 10.43.99.75). Desde fuera solo se llega por la VPN de la
+Javeriana y por túnel SSH, ambos cifrados.</li>
+<li>El Ingress no tiene certificado TLS propio (ver limitaciones).
+Con un dominio público se debe agregar TLS al Ingress.</li>
+<li>Las respuestas usan DTO sin contraseña y los errores no exponen
+detalles internos. Solo se guardan nombre y correo como datos
+personales.</li>
+</ul>
+<p><strong>Almacenamiento y respaldos de diagramas BPMN:</strong></p>
+<ul>
+<li>Los procesos y diagramas se guardan en PostgreSQL 16 dentro del
+clúster, con volumen persistente (PVC procesos-db-datos), que sobrevive
+a reinicios y redespliegues.</li>
+<li>La base solo es accesible dentro del clúster (Service ClusterIP):
+no se expone fuera.</li>
+<li>La eliminación de procesos y usuarios es lógica (estado
+inactivo), para no perder información histórica.</li>
+<li><strong>Respaldo</strong>: con pg_dump desde el pod de la base y
+restauración con psql (comandos en DESPLIEGUE_K8S.md).</li>
+</ul>
+<p><strong>Gestión de secretos y variables de entorno:</strong></p>
+<ul>
+<li><strong>Secret de Kubernetes</strong> procesos-secrets (DB_NAME,
+DB_USER, DB_PASSWORD, JWT_SECRET, DEMO_ADMIN_PASSWORD), creado a mano en
+el servidor con valores aleatorios (openssl rand).</li>
+<li>Ningún secreto está en el repositorio: solo existe
+k8s/secret.example.yaml con valores de ejemplo, y k8s/secret.yaml está
+en .gitignore.</li>
+<li>ghcr-secret usa un token con permiso exclusivo de lectura de
+paquetes (read:packages).</li>
+<li>GitHub Actions usa el GITHUB_TOKEN temporal de cada ejecución, y
+el token de SonarQube está en los Secrets del repositorio.</li>
+<li>application.properties solo referencia variables (${JWT_SECRET},
+${DB_PASSWORD}). Las credenciales fijas de versiones anteriores se
+eliminaron.</li>
+</ul>
+<h2>7. Riesgos y controles</h2>
+<table>
+<thead>
+<tr>
+<th>Riesgo / amenaza</th>
+<th>Impacto</th>
+<th>Medida de mitigación</th>
+<th>Responsable</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Acceso de una empresa a datos de otra (IDOR)</td>
+<td>Alto</td>
+<td>Empresa tomada del token; servicios validan la pertenencia de cada
+recurso; pruebas de aislamiento entre empresas.</td>
+<td>Equipo backend</td>
+</tr>
+<tr>
+<td>Suplantación de empresa enviando un X-Empresa-Id falso</td>
+<td>Alto</td>
+<td>El encabezado se eliminó y se ignora; prueba
+encabezadoXEmpresaIdFalso_seIgnora.</td>
+<td>Equipo backend</td>
+</tr>
+<tr>
+<td>Escalada de privilegios (EDITOR o LECTURA hacen acciones de
+ADMIN)</td>
+<td>Alto</td>
+<td>Reglas por rol en SecurityConfig; un admin no puede modificarse a sí
+mismo; pruebas que esperan 403.</td>
+<td>Equipo backend</td>
+</tr>
+<tr>
+<td>Robo o falsificación del JWT</td>
+<td>Alto</td>
+<td>Firma HS256 con secreto de al menos 32 caracteres en un Secret;
+vigencia de 60 min; usuario inactivo pierde el acceso al instante.</td>
+<td>Equipo backend</td>
+</tr>
+<tr>
+<td>Fuerza bruta sobre contraseñas</td>
+<td>Medio</td>
+<td>BCrypt, política de contraseñas y mensaje genérico. Pendiente:
+bloqueo por intentos fallidos.</td>
+<td>Equipo backend</td>
+</tr>
+<tr>
+<td>Exposición de secretos en el repositorio</td>
+<td>Alto</td>
+<td>Secrets de Kubernetes y de GitHub, variables de entorno y
+.gitignore; sin credenciales en el código.</td>
+<td>Equipo de despliegue</td>
+</tr>
+<tr>
+<td>Inyección SQL</td>
+<td>Alto</td>
+<td>JPA y JPQL con parámetros; validación de todas las entradas.</td>
+<td>Equipo backend</td>
+</tr>
+<tr>
+<td>XSS en la SPA</td>
+<td>Medio</td>
+<td>Escape automático de Angular, sin innerHTML; encabezados de
+seguridad en nginx.</td>
+<td>Equipo frontend</td>
+</tr>
+<tr>
+<td>CSRF</td>
+<td>Bajo</td>
+<td>API sin estado y sin cookies; credencial solo en el encabezado
+Authorization; 3 pruebas automáticas.</td>
+<td>Equipo backend</td>
+</tr>
+<tr>
+<td>Tráfico sin cifrar</td>
+<td>Medio</td>
+<td>Despliegue en red interna con acceso por VPN o túnel SSH. Pendiente:
+TLS en el Ingress.</td>
+<td>Equipo de despliegue</td>
+</tr>
+<tr>
+<td>Pérdida de datos</td>
+<td>Medio</td>
+<td>Volumen persistente, eliminación lógica y respaldo con pg_dump.</td>
+<td>Equipo de despliegue</td>
+</tr>
+</tbody>
+</table>
+<h2>8. Validación y pruebas de seguridad</h2>
+<table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Escenario / caso negativo</th>
+<th>Resultado esperado</th>
+<th>Resultado obtenido</th>
+<th>Evidencia</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>SEG-01</td>
+<td>Petición a la API sin token</td>
+<td>401</td>
+<td>Pasa</td>
+<td>sinToken_responde401</td>
+</tr>
+<tr>
+<td>SEG-02</td>
+<td>Token inventado o mal formado</td>
+<td>401</td>
+<td>Pasa</td>
+<td>tokenInventado_responde401</td>
+</tr>
+<tr>
+<td>SEG-03</td>
+<td>Token alterado, vencido o firmado con otra clave</td>
+<td>Token rechazado</td>
+<td>Pasa</td>
+<td>JwtServicioTest (8 casos)</td>
+</tr>
+<tr>
+<td>SEG-04</td>
+<td>Login con contraseña incorrecta</td>
+<td>401 sin token</td>
+<td>Pasa</td>
+<td>login_conClaveIncorrecta_responde401</td>
+</tr>
+<tr>
+<td>SEG-05</td>
+<td>Login de un usuario inactivo</td>
+<td>401</td>
+<td>Pasa</td>
+<td>login_deUsuarioInactivo_responde401</td>
+</tr>
+<tr>
+<td>SEG-06</td>
+<td>Usuario desactivado después de iniciar sesión</td>
+<td>401 con su token aún vigente</td>
+<td>Pasa</td>
+<td>usuarioDesactivadoDespuesDelLogin_pierdeElAcceso</td>
+</tr>
+<tr>
+<td>SEG-07</td>
+<td>LECTURA intenta crear un proceso</td>
+<td>403</td>
+<td>Pasa</td>
+<td>lectura_noPuedeCrearProcesos_responde403</td>
+</tr>
+<tr>
+<td>SEG-08</td>
+<td>EDITOR intenta eliminar un proceso</td>
+<td>403</td>
+<td>Pasa</td>
+<td>editor_noPuedeEliminarProcesos_responde403</td>
+</tr>
+<tr>
+<td>SEG-09</td>
+<td>EDITOR intenta crear un usuario</td>
+<td>403</td>
+<td>Pasa</td>
+<td>editor_noPuedeCrearUsuarios_responde403</td>
+</tr>
+<tr>
+<td>SEG-10</td>
+<td>ADMIN de otra empresa consulta o borra un proceso ajeno</td>
+<td>4xx sin datos</td>
+<td>Pasa</td>
+<td>adminDeOtraEmpresa_noVeElProcesoAjeno,
+adminDeOtraEmpresa_noPuedeBorrarElProcesoAjeno</td>
+</tr>
+<tr>
+<td>SEG-11</td>
+<td>ADMIN de otra empresa consulta una empresa ajena</td>
+<td>403</td>
+<td>Pasa</td>
+<td>adminDeOtraEmpresa_noPuedeVerLaEmpresaAjena_responde403</td>
+</tr>
+<tr>
+<td>SEG-12</td>
+<td>Encabezado X-Empresa-Id falso</td>
+<td>Se ignora: solo ve su empresa</td>
+<td>Pasa</td>
+<td>encabezadoXEmpresaIdFalso_seIgnora</td>
+</tr>
+<tr>
+<td>SEG-13</td>
+<td>Petición con cookie de sesión pero sin token (CSRF)</td>
+<td>401</td>
+<td>Pasa</td>
+<td>csrf_peticionConCookieDeSesionPeroSinToken_responde401</td>
+</tr>
+<tr>
+<td>SEG-14</td>
+<td>Token enviado como cookie</td>
+<td>401</td>
+<td>Pasa</td>
+<td>csrf_tokenEnviadoComoCookie_noAutentica</td>
+</tr>
+<tr>
+<td>SEG-15</td>
+<td>El login no crea sesión ni cookie</td>
+<td>Sin Set-Cookie</td>
+<td>Pasa</td>
+<td>csrf_elLoginNoCreaSesionNiCookie</td>
+</tr>
+<tr>
+<td>SEG-16</td>
+<td>ADMIN intenta eliminarse o cambiar su propio rol</td>
+<td>400 sin cambios</td>
+<td>Pasa</td>
+<td>eliminar_suPropiaCuenta_devuelve400SinLlamarAlService,
+cambiarRol_propio_devuelve400</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Pruebas para acceso sin sesión:</strong></p>
+<ul>
+<li>La prueba de integración SeguridadIntegracionTest levanta la
+aplicación completa (@SpringBootTest con H2) y su cadena de filtros
+real. Cubre las peticiones sin token, con token inventado y con
+credenciales solo en cookie (SEG-01, SEG-02, SEG-13 y SEG-14).</li>
+<li>JwtServicioTest prueba de forma unitaria los tokens alterados,
+vencidos, firmados con otra clave, vacíos o mal formados (SEG-03), y
+EmpresaActualTest que sin sesión no se obtiene empresa.</li>
+</ul>
+<p><strong>Pruebas para usuarios sin permiso:</strong> con usuarios
+reales de cada rol creados en la prueba, se verifica que LECTURA no
+escribe, que EDITOR no elimina ni administra usuarios, y que las cuentas
+inactivas o desactivadas pierden el acceso (SEG-04 a SEG-09).</p>
+<p><strong>Pruebas de acceso a recursos de otro usuario:</strong> se
+crean dos empresas con sus administradores y se comprueba que el ADMIN
+de una no puede leer, borrar ni ver los datos de la otra, ni siquiera
+enviando un X-Empresa-Id falso (SEG-10 a SEG-12). Las pruebas de
+controlador verifican que un administrador no puede modificar su propia
+cuenta (SEG-16).</p>
+<p><strong>Registro de hallazgos y correcciones:</strong></p>
+<ul>
+<li><strong>Empresa tomada de un encabezado</strong>: antes la
+empresa se leía de X-Empresa-Id, que cualquiera podía cambiar para
+consultar otra empresa. Corregido con JWT: ahora sale del token
+firmado.</li>
+<li><strong>Listado de todas las empresas</strong>: GET
+/api/v1/empresas devolvía todas las empresas registradas. Ahora devuelve
+solo la propia.</li>
+<li><strong>Login provisional</strong>: devolvía el usuario sin
+ningún token. Se reemplazó por POST /api/auth/login con JWT.</li>
+<li><strong>Autoeliminación del administrador</strong>: un ADMIN
+podía eliminarse o quitarse el rol. Ahora se bloquea.</li>
+<li><strong>SonarQube java:S4502 (CSRF)</strong>: revisado,
+justificado y aceptado (H-05).</li>
+<li><strong>SonarQube java:S2119 (SecureRandom)</strong>: corregido.
+El análisis del 16/11/2026 quedó con seguridad A y 0 issues de seguridad
+(figura 2).</li>
+</ul>
+<h2>9. Evidencias y conclusiones</h2>
+<p><strong>Diagrama de flujo de autenticación/autorización:</strong>
+figura 1, al final de esta sección.</p>
+<p><strong>Enlace a configuración o código relevante (sin
+secretos):</strong></p>
+<ul>
+<li><strong>Backend</strong>:
+thymeleaf/src/main/java/com/proyecto1/thymeleaf/security/
+(SecurityConfig, JwtServicio, JwtFiltro, UsuarioDetallesServicio,
+ManejadorErroresSeguridad), util/EmpresaActual.java y
+controllers/AuthController.java en
+<a href="https://github.com/Desarrollo-Web-2630/Proyecto1" target="_blank" rel="noopener">https://github.com/Desarrollo-Web-2630/Proyecto1</a>.</li>
+<li><strong>Frontend</strong>: front/src/app/core/ (auth.guard.ts,
+rol.guard.ts, invitado.guard.ts, api.interceptor.ts) y
+services/sesion.service.ts en
+<a href="https://github.com/Desarrollo-Web-2630/Proyecto2" target="_blank" rel="noopener">https://github.com/Desarrollo-Web-2630/Proyecto2</a>.</li>
+<li><strong>Despliegue</strong>: thymeleaf/k8s/secret.example.yaml y
+DESPLIEGUE_K8S.md (creación de secretos).</li>
+</ul>
+<p><strong>Capturas o reportes de pruebas:</strong></p>
+<ul>
+<li>Reportes de JUnit en target/surefire-reports (./mvnw verify),
+también ejecutados en GitHub Actions con el análisis de SonarQube
+Cloud.</li>
+<li>Figura 2: seguridad en SonarQube Cloud (rating A, 0 issues).
+Figura 3: hallazgo de CSRF revisado (H-05).</li>
+</ul>
+<p><strong>Limitaciones conocidas y pendientes:</strong></p>
+<ul>
+<li>Sin HTTPS propio en el Ingress: el acceso es por red interna, VPN
+o túnel SSH.</li>
+<li>Sin recuperación de contraseña («olvidé mi contraseña»).</li>
+<li>Sin bloqueo por intentos fallidos de login ni limitación general
+de solicitudes.</li>
+<li>El JWT no se revoca en el servidor al cerrar sesión; lo mitigan
+la vigencia de 60 minutos y la comprobación de usuario activo en cada
+petición.</li>
+<li>El token en sessionStorage es accesible a JavaScript: depende de
+mantener la aplicación libre de XSS.</li>
+<li>Sin registro de auditoría de accesos.</li>
+<li>Envío de correo deshabilitado en el despliegue: el enlace de
+verificación se obtiene del log del backend.</li>
+</ul>
+<figure class="wiki-figure">
+  <img src="/images/documentacion/seguridad/fig1.png" alt="Figura 1. Flujo de autenticación (login con JWT) y de autorización en cada petición." loading="lazy" />
+  <figcaption>Figura 1. Flujo de autenticación (login con JWT) y de autorización en cada petición.</figcaption>
+</figure>
+<figure class="wiki-figure">
+  <img src="/images/documentacion/seguridad/fig2.png" alt="Figura 2. Seguridad en SonarQube Cloud tras integrar Spring Security: rating A y 0 issues abiertos." loading="lazy" />
+  <figcaption>Figura 2. Seguridad en SonarQube Cloud tras integrar Spring Security: rating A y 0 issues abiertos.</figcaption>
+</figure>
+<figure class="wiki-figure">
+  <img src="/images/documentacion/seguridad/fig3.png" alt="Figura 3. Hallazgo java:S4502 (CSRF deshabilitado) en SecurityConfig.java, revisado y aceptado (H-05)." loading="lazy" />
+  <figcaption>Figura 3. Hallazgo java:S4502 (CSRF deshabilitado) en SecurityConfig.java, revisado y aceptado (H-05).</figcaption>
+</figure>

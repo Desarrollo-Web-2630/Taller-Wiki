@@ -1,0 +1,686 @@
+<h2>Ficha del documento</h2>
+<table>
+<thead>
+<tr>
+<th>Dato</th>
+<th>Información</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Institución / asignatura</td>
+<td>Pontificia Universidad Javeriana · Desarrollo Web</td>
+</tr>
+<tr>
+<td>Nombre del proyecto</td>
+<td>Sistema de Gestión de Procesos multiempresa: visor y editor de
+procesos empresariales (BPMN)</td>
+</tr>
+<tr>
+<td>Equipo / integrantes</td>
+<td><p>Héctor Estrada</p>
+<p>Mariana Osorio</p>
+<p>Iván Pardo</p>
+<p>Sebastián Velásquez</p></td>
+</tr>
+<tr>
+<td>Docente</td>
+<td>Pablo Márquez</td>
+</tr>
+<tr>
+<td>Versión / fecha</td>
+<td><p>Versión 1.1 · 16 de noviembre de 2026</p>
+<p>Análisis SonarQube Cloud: rama main, 16 de noviembre de 2026 (con
+Spring Security integrado)</p></td>
+</tr>
+<tr>
+<td>Enlace al repositorio</td>
+<td><p>Backend: <a href="https://github.com/Desarrollo-Web-2630/proyecto1" target="_blank" rel="noopener">https://github.com/Desarrollo-Web-2630/proyecto1</a></p>
+<p>Frontend: <a href="https://github.com/Desarrollo-Web-2630/proyecto2" target="_blank" rel="noopener">https://github.com/Desarrollo-Web-2630/proyecto2</a></p>
+<p>SonarQube Cloud:
+<a href="https://sonarcloud.io/summary/new_code?id=Desarrollo-Web-2630_Proyecto1&amp;branch=main" target="_blank" rel="noopener">https://sonarcloud.io/summary/new_code?id=Desarrollo-Web-2630_Proyecto1&amp;branch=main</a></p></td>
+</tr>
+</tbody>
+</table>
+<h2>1. Alcance técnico</h2>
+<p><strong>Componentes frontend cubiertos:</strong> No aplica. No se
+hacen pruebas unitarias para el frontend.</p>
+<ul>
+<li>El frontend Angular (repositorio Proyecto2) no tiene pruebas
+unitarias y no se analiza en SonarQube Cloud. Todo lo que reporta este
+documento corresponde al backend (Proyecto1).</li>
+<li>Las reglas de negocio, la validación de datos y la seguridad
+están en el backend. El frontend presenta la información y consume la
+API REST. Sus guards ocultan pantallas según el rol, pero no protegen
+nada por sí solos: cada petición se valida en el servidor con Spring
+Security.</li>
+<li>El funcionamiento del frontend se valida con las pruebas de
+extremo a extremo (E2E), descritas en el documento de Pruebas
+automatizadas.</li>
+</ul>
+<p><strong>Componentes backend cubiertos:</strong> Todo el backend
+Spring Boot del repositorio Proyecto1 (módulo thymeleaf), con 37 clases
+de prueba en el análisis del commit b6dfca83, más 2 de seguridad
+agregadas en la entrega final, organizadas igual que el código
+fuente:</p>
+<ul>
+<li><strong>services</strong> (15 clases): EmpresaService,
+UsuarioService, VerificacionCorreoService, CorreoService,
+ProcesoService, ActividadService, GatewayService, ArcoService,
+ElementoConectableService, RolProcesoService, UsoRolProcesoConLanes,
+UsoRolProcesoSinLanes, PoolService, LaneService y
+MensajeService.</li>
+<li><strong>controllers</strong> (14 clases): los 13 controladores
+REST y GlobalExceptionHandler.</li>
+<li><strong>repository</strong>: ProcesoRepository (consultas
+personalizadas con filtro por empresa).</li>
+<li><strong>dto, model, util y config</strong>: DTO de petición y
+respuesta, entidades, PasswordUtil, EmpresaActual, DataInitializer y la
+configuración de OpenAPI.</li>
+<li><strong>security</strong> (2 clases, agregadas con Spring
+Security en la entrega final): JwtServicioTest (unitaria: generar y
+validar el token, token alterado, vencido o firmado con otra clave) y
+SeguridadIntegracionTest (integración: 22 casos de login, respuestas 401
+y 403 por rol, aislamiento entre empresas y CSRF).</li>
+</ul>
+<p><strong>Frameworks de prueba y versiones:</strong> Java 17 y Spring
+Boot 3.3.2. Las versiones de las librerías de prueba las fija el BOM de
+Spring Boot:</p>
+<ul>
+<li>spring-boot-starter-test: JUnit 5 (Jupiter), Mockito, AssertJ y
+Spring Test (MockMvc).</li>
+<li>spring-security-test y JJWT 0.12.6 para las pruebas de
+autenticación con JWT y autorización por rol.</li>
+<li>H2 en memoria (perfil h2) para las pruebas de
+repositorio.</li>
+<li>JaCoCo 0.8.12 (jacoco-maven-plugin) para el reporte de
+cobertura.</li>
+<li>SonarScanner para Maven 3.11.0.3922
+(sonar-maven-plugin).</li>
+</ul>
+<p><strong>Estrategia de mocks / fixtures:</strong> Se usa un tipo de
+aislamiento según la capa:</p>
+<ul>
+<li><strong>Servicios</strong>: @ExtendWith(MockitoExtension.class)
+con @Mock para repositorios y servicios colaboradores, y @InjectMocks
+para la clase probada. No se levanta Spring ni base de datos.</li>
+<li><strong>Controladores</strong>: @WebMvcTest con MockMvc y
+@MockBean del servicio. Se verifican el código HTTP, el JSON de
+respuesta y el manejo de errores.</li>
+<li><strong>Repositorio</strong>: @DataJpaTest con perfil h2. En
+@BeforeEach se crean dos empresas (A y B) con sus procesos para
+comprobar que las consultas nunca mezclan empresas.</li>
+<li><strong>Correo</strong>: JavaMailSender simulado con Mockito; en
+las pruebas no se envía ningún correo real.</li>
+<li><strong>DTO, modelo y utilidades</strong>: pruebas puras de
+JUnit, sin contexto de Spring.</li>
+</ul>
+<h2>2. Pruebas unitarias</h2>
+<p><strong>Criterios de selección de unidades:</strong> Se priorizó la
+capa de servicio porque ahí viven las reglas de negocio de las historias
+de usuario. Para cada regla se escribió un caso válido y uno o más casos
+de error. Las reglas cubiertas son:</p>
+<ul>
+<li>Validaciones de datos (NIT, correo, contraseña, campos
+obligatorios).</li>
+<li>Unicidad dentro de la empresa (NIT, nombre de proceso, nombre de
+rol).</li>
+<li>Aislamiento multiempresa: ninguna operación devuelve ni modifica
+datos de otra empresa.</li>
+<li>Coherencia del diagrama: los arcos no cruzan pools, los mensajes
+sí; no se elimina un rol en uso ni un pool con lanes.</li>
+<li>Ciclo de vida del proceso: borrador, publicado e inactivo
+(eliminación lógica).</li>
+<li>Además se probaron los controladores (contrato HTTP), las
+consultas propias del repositorio y PasswordUtil, por ser código
+sensible de seguridad.</li>
+</ul>
+<p><strong>Casos representativos:</strong> La tabla "Casos unitarios"
+resume 17 de los 334 casos, uno o dos por regla de negocio. Los nombres
+de los métodos de prueba siguen el patrón
+metodo_escenario_resultadoEsperado, por ejemplo
+crearArco_entreActividadesDeDistintoPool_lanzaExcepcion.</p>
+<p><strong>Comandos para ejecutar pruebas:</strong> Desde la carpeta
+thymeleaf del repositorio Proyecto1 (en Windows se usa mvnw.cmd):</p>
+<pre><code>./mvnw test                          # todas las pruebas + reporte JaCoCo
+./mvnw test -Dtest=EmpresaServiceTest  # una sola clase
+./mvnw verify sonar:sonar -Dsonar.projectKey=Desarrollo-Web-2630_Proyecto1 \
+  -Dsonar.token=$SONAR_TOKEN           # análisis en SonarQube Cloud</code></pre>
+<ul>
+<li>El reporte de cobertura queda en target/site/jacoco/index.html, y
+el XML que lee SonarQube Cloud en
+target/site/jacoco/jacoco.xml.</li>
+</ul>
+<p><strong>Resultados, cobertura y exclusiones justificadas:</strong> La
+rama main tiene 334 casos de prueba en 37 clases. La última corrida
+analizada (commit b6dfca83) terminó con todas las pruebas en verde: mvn
+verify habría fallado y no se habría generado el análisis si alguna
+prueba fallara.</p>
+<ul>
+<li>Cobertura total: <strong>89,5 %</strong> (+4,3 % frente al
+análisis anterior, que tenía 88,5 %).</li>
+<li>Cobertura del código nuevo: <strong>94,36 %</strong> sobre 363
+líneas por cubrir (análisis del 7/11, commit b6dfca83).</li>
+<li>Exclusión: solo ThymeleafApplication.java (sonar.exclusions). Es
+la clase main que arranca Spring y no tiene lógica que probar.</li>
+<li>El plan de JMeter en src/test/jmeter es de pruebas de carga; no
+cuenta como prueba unitaria y se documenta aparte.</li>
+</ul>
+<h2>3. Configuración de SonarQube</h2>
+<p><strong>Edición / versión / proyecto:</strong> SonarQube Cloud (antes
+SonarCloud), plan gratuito para repositorios públicos.</p>
+<ul>
+<li>Organización: desarrollo-web-2630.</li>
+<li>Clave del proyecto: Desarrollo-Web-2630_Proyecto1; nombre
+visible: thymeleaf; versión 0.0.1-SNAPSHOT.</li>
+<li>Rama analizada: main. Tamaño: 4 k líneas de código Java (3,6 k
+antes de la entrega final).</li>
+</ul>
+<p><strong>Integración con repositorio o CI:</strong> Workflow de GitHub
+Actions llamado "SonarQube" (build.yml):</p>
+<ul>
+<li>Se dispara con cada push a main y con cada pull request (opened,
+synchronize, reopened).</li>
+<li>Prepara JDK 21 (Zulu) y guarda en caché ~/.sonar/cache y ~/.m2.
+Hace checkout con fetch-depth: 0 para que Sonar tenga el historial
+completo.</li>
+<li>Ejecuta mvn -B verify
+org.sonarsource.scanner.maven:sonar-maven-plugin:sonar con el token
+guardado en el secreto SONAR_TOKEN.</li>
+<li>En el pom.xml se configuran sonar.organization,
+sonar.coverage.jacoco.xmlReportPaths, sonar.java.binaries,
+sonar.java.test.binaries y sonar.java.source. JaCoCo genera el reporte
+en la fase test.</li>
+<li><strong>Observación:</strong> el 23/09 se creó
+.github/workflows/sonarcloud.yml en la raíz y ese mismo día se borró
+(commit 1230777). El build.yml actual está en
+thymeleaf/.github/workflows/, pero GitHub Actions solo lee
+.github/workflows en la raíz del repositorio, así que no se dispara. Por
+eso el último análisis es de hace 10 días y los commits posteriores no
+se han analizado (ver H-03).</li>
+</ul>
+<p><strong>Quality Gate definido:</strong> Aplica sobre el código nuevo.
+El período de código nuevo es "desde la versión anterior"; como la
+versión del pom.xml no ha cambiado, en la práctica cubre los últimos dos
+meses. Las condiciones son:</p>
+<ul>
+<li>Cobertura del código nuevo ≥ 80 %.</li>
+<li>Líneas duplicadas en código nuevo ≤ 3 %.</li>
+<li>Issues nuevos y Security Hotspots: sin condición en el gate. Se
+revisan manualmente con los ratings (sección 4).</li>
+</ul>
+<p><strong>Reglas y exclusiones configuradas:</strong> Se usa el perfil
+de calidad (Quality Profile) que SonarQube trae por defecto para Java,
+llamado «Sonar way», sin reglas desactivadas ni issues aceptados (0
+accepted issues).</p>
+<ul>
+<li>Exclusión de análisis: **/ThymeleafApplication.java.</li>
+<li>No hay exclusiones de duplicación ni de cobertura
+adicionales.</li>
+</ul>
+<h2>4. Resultados del análisis</h2>
+<p><strong>Cobertura reportada:</strong> 89,5 % en el código total en el
+análisis del 16/11 (figura 8), frente a 88,5 % el 7/11. En el código
+nuevo la última medición fue 94,36 % (figura 2). Ambas superan el mínimo
+de 80 % del gate.</p>
+<p><strong>Bugs, vulnerabilidades y code smells:</strong> el análisis
+del 16/11 tiene 58 issues abiertos, todos de mantenibilidad:</p>
+<ul>
+<li><strong>Seguridad</strong>: 0 issues abiertos (rating A) y 0
+Security Hotspots (rating de revisión A), figuras 9 y 10. Al integrar
+Spring Security apareció 1 issue High (regla java:S4502, protección CSRF
+deshabilitada); se revisó, es seguro en esta arquitectura y se marcó
+como aceptado (H-05, figura 7).</li>
+<li><strong>Confiabilidad (bugs)</strong>: 0 issues, rating
+<strong>A</strong> (figura 11). El único bug, "Save and re-use this
+Random" en EmpresaService.java, se corrigió (H-01); antes dejaba el
+rating en D.</li>
+<li><strong>Mantenibilidad (code smells)</strong>: 58 issues, con
+rating A (figura 12).</li>
+</ul>
+<p><strong>Duplicación y mantenibilidad:</strong> la duplicación es de
+0,0 % (máximo 3 %). La mantenibilidad tiene rating A, es decir, una
+deuda técnica menor al 5 %. Los issues de mantenibilidad subieron un
+23,4 %: pasaron de cerca de 47 a 56 hacia el 25 de octubre, con los
+controladores REST de la segunda entrega, y a 58 con la seguridad de la
+entrega final (figura 12).</p>
+<p><strong>Estado del Quality Gate: Passed</strong>: todas las
+condiciones se cumplen y las cuatro dimensiones (seguridad, revisión de
+seguridad, confiabilidad y mantenibilidad) están en rating A.</p>
+<p><strong>Evidencias del análisis:</strong> figuras 1 a 7 (análisis del
+7/11 y hallazgo H-05) y figuras 8 a 12 (análisis del 16/11) en el anexo,
+tomadas del proyecto en SonarQube Cloud. El análisis tiene 1 advertencia
+(analysis warning), que se revisará (H-04).</p>
+<h2>5. Acciones y conclusiones</h2>
+<p><strong>Hallazgos prioritarios:</strong> En orden de prioridad:</p>
+<ul>
+<li><strong>H-01</strong>: el bug de confiabilidad High (SecureRandom
+no reutilizado) impedía tener rating A en las cuatro dimensiones.
+Corregido el 16/11: hoy las cuatro están en A.</li>
+<li><strong>H-05</strong>: issue de seguridad High por CSRF
+deshabilitado en SecurityConfig. Revisado y justificado; el detalle está
+en «Detalle de fallos y correcciones».</li>
+<li><strong>H-03</strong>: el workflow de CI no se está ejecutando
+por su ubicación, así que el código nuevo no se está
+analizando.</li>
+<li><strong>H-02</strong>: la cantidad de code smells crece con cada
+entrega.</li>
+</ul>
+<p><strong>Correcciones realizadas:</strong> Registradas en el historial
+de commits del repositorio Proyecto1:</p>
+<ul>
+<li><strong>17/09 · d7b4909</strong>: se eliminaron las credenciales
+fijas del código y de application.properties (ahora llegan por variables
+de entorno) y se cerró el flujo de verificación de cuenta.</li>
+<li><strong>17/09 · 7fb8a02</strong>: todos los controladores
+responden con DTO de respuesta; se corrigió la recursión infinita al
+serializar entidades a JSON.</li>
+<li><strong>21/09 · c06cc7f</strong>: por alerta de GitGuardian, las
+contraseñas de ejemplo de la colección de Postman se reemplazaron por la
+variable {{examplePassword}}.</li>
+<li><strong>23/09 · d4cb03c "Correcciones sonar"</strong>: regla
+S2119 en DataInitializer (el SecureRandom se volvió un campo static
+final reutilizable) y código 500 escrito con
+HttpStatus.INTERNAL_SERVER_ERROR en DebugEmailController.</li>
+<li><strong>23/09 · 0957429 "Sonar corregido al 85 %"</strong>: se
+agregaron sonar.java.binaries y sonar.java.test.binaries (elimina la
+advertencia "Missing sonar.java.test.binaries") y se ajustaron pruebas;
+la cobertura llegó al 85 %.</li>
+<li><strong>30/09 · 1ac868d</strong>: refactor para que cada servicio
+consuma un solo repositorio.</li>
+<li>Se quitó la versión fija de Lombok; ahora la gestiona el BOM de
+Spring Boot (smell de versiones duplicadas).</li>
+<li>Según el histórico de SonarQube Cloud, en octubre se cerraron
+cerca de 4 issues de seguridad y cerca de 19 de mantenibilidad (figuras
+3 y 5). La cobertura total subió a 88,5 %.</li>
+<li><strong>16/11 · Spring Security + JWT</strong>: la empresa y el
+rol se toman del token firmado y ya no del encabezado X-Empresa-Id. Las
+reglas por rol quedan en SecurityConfig y se agregan las pruebas
+JwtServicioTest y SeguridadIntegracionTest.</li>
+<li><strong>16/11 · H-01 corregido</strong>: EmpresaService usa un
+campo private static final SecureRandom reutilizado (regla S2119), igual
+que DataInitializer.</li>
+<li><strong>16/11 · H-05 revisado</strong>: la desactivación de CSRF
+se justifica en el código, se comprueba con 3 pruebas automáticas y se
+marcó en SonarQube Cloud como aceptada con su justificación.</li>
+</ul>
+<p><strong>Limitaciones / deuda técnica pendiente:</strong> Queda
+pendiente:</p>
+<ul>
+<li>Mover el workflow a .github/workflows/ en la raíz y agregar
+working-directory: thymeleaf.</li>
+<li>Clasificar los 56 code smells por regla y corregir primero los de
+mayor severidad.</li>
+</ul>
+<h2>6. Casos unitarios</h2>
+<table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Unidad / función</th>
+<th>Escenario</th>
+<th>Esperado</th>
+<th>Resultado</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>UT-01</td>
+<td>EmpresaService.registrarEmpresa</td>
+<td>Datos válidos</td>
+<td>Crea la empresa y un administrador inactivo; envía token de
+verificación</td>
+<td>Pasa</td>
+</tr>
+<tr>
+<td>UT-02</td>
+<td>EmpresaService.registrarEmpresa</td>
+<td>NIT ya registrado</td>
+<td>IllegalArgumentException; no guarda</td>
+<td>Pasa</td>
+</tr>
+<tr>
+<td>UT-03</td>
+<td>UsuarioService.registrarUsuario</td>
+<td>Contraseña débil</td>
+<td>Lanza excepción</td>
+<td>Pasa</td>
+</tr>
+<tr>
+<td>UT-04</td>
+<td>UsuarioService.login</td>
+<td>Usuario inactivo con credenciales correctas</td>
+<td>Optional vacío (no inicia sesión)</td>
+<td>Pasa</td>
+</tr>
+<tr>
+<td>UT-05</td>
+<td>ProcesoService.crearProceso</td>
+<td>Datos válidos</td>
+<td>El proceso nace en estado BORRADOR</td>
+<td>Pasa</td>
+</tr>
+<tr>
+<td>UT-06</td>
+<td>ProcesoService.publicarProceso</td>
+<td>Proceso ya publicado</td>
+<td>Lanza excepción</td>
+<td>Pasa</td>
+</tr>
+<tr>
+<td>UT-07</td>
+<td>ProcesoService.reactivarProceso</td>
+<td>Proceso inactivo</td>
+<td>Vuelve a BORRADOR</td>
+<td>Pasa</td>
+</tr>
+<tr>
+<td>UT-08</td>
+<td>ArcoService.crearArco</td>
+<td>Actividades en pools distintos</td>
+<td>Lanza excepción: los arcos no cruzan pools</td>
+<td>Pasa</td>
+</tr>
+<tr>
+<td>UT-09</td>
+<td>ArcoService.crearArco</td>
+<td>Origen igual a destino</td>
+<td>Lanza excepción</td>
+<td>Pasa</td>
+</tr>
+<tr>
+<td>UT-10</td>
+<td>MensajeService.crearMensaje</td>
+<td>Mismo pool en ambos extremos</td>
+<td>Lanza excepción: el mensaje debe ir entre pools</td>
+<td>Pasa</td>
+</tr>
+<tr>
+<td>UT-11</td>
+<td>RolProcesoService.eliminarRol</td>
+<td>Rol asignado a una lane</td>
+<td>No elimina e informa en qué procesos se usa</td>
+<td>Pasa</td>
+</tr>
+<tr>
+<td>UT-12</td>
+<td>PoolService.eliminarPool</td>
+<td>Pool con lanes</td>
+<td>Lanza excepción; no elimina</td>
+<td>Pasa</td>
+</tr>
+<tr>
+<td>UT-13</td>
+<td>LaneService.reordenarLanes</td>
+<td>Id de lane de otro pool</td>
+<td>Lanza excepción</td>
+<td>Pasa</td>
+</tr>
+<tr>
+<td>UT-14</td>
+<td>ProcesoRepository.buscar</td>
+<td>Empresas A y B con procesos</td>
+<td>Solo devuelve procesos de la empresa consultada</td>
+<td>Pasa</td>
+</tr>
+<tr>
+<td>UT-15</td>
+<td>PasswordUtil.cumpleReglasBasicas</td>
+<td>Contraseña sin mayúscula</td>
+<td>Devuelve false</td>
+<td>Pasa</td>
+</tr>
+<tr>
+<td>UT-16</td>
+<td>GlobalExceptionHandler.manejarValidacion</td>
+<td>Varios campos inválidos</td>
+<td>Respuesta 400 con el mensaje de cada campo</td>
+<td>Pasa</td>
+</tr>
+<tr>
+<td>UT-17</td>
+<td>EmpresaController (GET por id)</td>
+<td>Empresa existente</td>
+<td>HTTP 200 con el JSON de la empresa</td>
+<td>Pasa</td>
+</tr>
+</tbody>
+</table>
+<p>17 de 334 casos. El listado completo está en thymeleaf/src/test/java
+del repositorio Proyecto1.</p>
+<h2>7. Indicadores SonarQube</h2>
+<table>
+<thead>
+<tr>
+<th>Métrica</th>
+<th>Resultado</th>
+<th>Umbral / criterio</th>
+<th>Cumple</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Quality Gate</td>
+<td>Passed</td>
+<td>Todas las condiciones</td>
+<td>Sí</td>
+</tr>
+<tr>
+<td>Cobertura (código nuevo)</td>
+<td>94,36 % (363 líneas, análisis 7/11)</td>
+<td>≥ 80 %</td>
+<td>Sí</td>
+</tr>
+<tr>
+<td>Cobertura (código total)</td>
+<td>89,5 %</td>
+<td>≥ 80 % (meta del equipo)</td>
+<td>Sí</td>
+</tr>
+<tr>
+<td>Duplicación (código nuevo)</td>
+<td>0,0 %</td>
+<td>≤ 3 %</td>
+<td>Sí</td>
+</tr>
+<tr>
+<td>Security rating</td>
+<td>A (0 issues; H-05 aceptado)</td>
+<td>A</td>
+<td>Sí</td>
+</tr>
+<tr>
+<td>Security review rating</td>
+<td>A (0 hotspots)</td>
+<td>A</td>
+<td>Sí</td>
+</tr>
+<tr>
+<td>Reliability rating</td>
+<td>A (0 issues)</td>
+<td>A (meta del equipo)</td>
+<td>Sí</td>
+</tr>
+<tr>
+<td>Maintainability rating</td>
+<td>A (58 issues)</td>
+<td>A (deuda &lt; 5 %)</td>
+<td>Sí</td>
+</tr>
+<tr>
+<td>Issues nuevos</td>
+<td>30 (análisis 7/11)</td>
+<td>Sin condición en el gate</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>Pruebas unitarias</td>
+<td>334 casos en 37 clases (7/11)</td>
+<td>Todas pasan</td>
+<td>Sí</td>
+</tr>
+</tbody>
+</table>
+<p>Valores del análisis del 16/11/2026, con Spring Security integrado.
+La cobertura y la duplicación del código nuevo, y el número de pruebas,
+son del análisis del 7/11 (commit b6dfca83).</p>
+<h2>8. Hallazgos</h2>
+<table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Tipo / severidad</th>
+<th>Ubicación</th>
+<th>Acción / estado</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>H-01</td>
+<td>Bug · Confiabilidad · High (regla java:S2119, "Save and re-use this
+Random")</td>
+<td>services/EmpresaService.java, L151 (generarPasswordDescartable)</td>
+<td>Corregido el 16/11: campo private static final SecureRandom
+reutilizado, igual que en DataInitializer (commit d4cb03c). Confirmado
+en el análisis del 16/11: confiabilidad A, 0 issues.</td>
+</tr>
+<tr>
+<td>H-02</td>
+<td>Code smells · Mantenibilidad (58)</td>
+<td>Varios archivos del backend</td>
+<td>Abiertos. Clasificar por regla y corregir los de mayor severidad
+antes del 23/11.</td>
+</tr>
+<tr>
+<td>H-03</td>
+<td>Configuración de CI</td>
+<td>thymeleaf/.github/workflows/build.yml</td>
+<td>Mover a .github/workflows en la raíz y usar working-directory:
+thymeleaf. Pendiente.</td>
+</tr>
+<tr>
+<td>H-04</td>
+<td>Advertencia del análisis (1)</td>
+<td>Panel del proyecto en SonarQube Cloud</td>
+<td>Revisar la causa y corregirla en la configuración. Pendiente.</td>
+</tr>
+<tr>
+<td>H-05</td>
+<td>Seguridad · High (regla java:S4502, "Make sure disabling Spring
+Security's CSRF protection is safe here")</td>
+<td>security/SecurityConfig.java, L42:
+.csrf(AbstractHttpConfigurer::disable)</td>
+<td>Revisado: seguro por diseño (API sin estado con JWT en el encabezado
+Authorization). Justificado en el código, comprobado con 3 pruebas y
+marcado como aceptado en SonarQube Cloud el 16/11 (seguridad: 0 issues,
+rating A). Ver «Detalle de fallos y correcciones».</td>
+</tr>
+</tbody>
+</table>
+<h2>9. Detalle de fallos y correcciones: H-05 (CSRF)</h2>
+<p><strong>Qué reporta SonarQube:</strong> la regla java:S4502 marca
+cualquier configuración que deshabilite la protección CSRF de Spring
+Security y pide confirmar que es seguro. Tiene severidad High en
+seguridad y antes se clasificaba como Security Hotspot (etiqueta
+former-hotspot). Ver figura 7.</p>
+<p><strong>Por qué aparece:</strong> al integrar Spring Security en la
+entrega final, SecurityConfig deshabilita CSRF con
+.csrf(AbstractHttpConfigurer::disable).</p>
+<p><strong>Por qué es seguro en este proyecto:</strong> un ataque CSRF
+aprovecha que el navegador envía por su cuenta las cookies de sesión
+cuando otro sitio dispara una petición. En esta API eso no puede
+pasar:</p>
+<ul>
+<li>La API es sin estado (SessionCreationPolicy.STATELESS): no crea
+sesión ni cookie JSESSIONID.</li>
+<li>La única forma de autenticarse es el JWT en el encabezado
+Authorization: Bearer. El navegador nunca agrega ese encabezado por su
+cuenta; solo lo pone el interceptor de Angular.</li>
+<li>El frontend guarda el token en sessionStorage, no en una
+cookie.</li>
+<li>CORS solo admite los orígenes de APP_CORS_ORIGENES y los
+encabezados Authorization y Content-Type.</li>
+</ul>
+<p><strong>Por qué no se activó CSRF:</strong> activarlo obligaría a
+manejar un token CSRF adicional en cada petición sin agregar protección
+real, porque ninguna petición se autentica con cookies.</p>
+<p><strong>Corrección aplicada:</strong></p>
+<ul>
+<li>Comentario en SecurityConfig que deja documentada la revisión y
+remite a las pruebas.</li>
+<li>Tres pruebas en SeguridadIntegracionTest:
+csrf_elLoginNoCreaSesionNiCookie (el login no devuelve Set-Cookie),
+csrf_peticionConCookieDeSesionPeroSinToken_responde401 y
+csrf_tokenEnviadoComoCookie_noAutentica (un token enviado como cookie no
+autentica).</li>
+<li>En SonarQube Cloud el issue se marcó como aceptado (Accepted) el
+16/11 con la justificación anterior como comentario. Desde entonces el
+proyecto tiene 0 issues de seguridad y rating A (figura 9).</li>
+</ul>
+<p><strong>Estado:</strong> cerrado por revisión. Si en el futuro la
+autenticación pasara a usar cookies, habría que volver a activar
+CSRF.</p>
+<h2>10. Anexos y referencias</h2>
+<p>Repositorio / documentación:</p>
+<ul>
+<li>Backend (Spring Boot):
+<a href="https://github.com/Desarrollo-Web-2630/proyecto1" target="_blank" rel="noopener">https://github.com/Desarrollo-Web-2630/proyecto1</a></li>
+<li>Frontend (Angular):
+<a href="https://github.com/Desarrollo-Web-2630/proyecto2" target="_blank" rel="noopener">https://github.com/Desarrollo-Web-2630/proyecto2</a></li>
+<li>Resumen en SonarQube Cloud:
+<a href="https://sonarcloud.io/summary/new_code?id=Desarrollo-Web-2630_Proyecto1&amp;branch=main" target="_blank" rel="noopener">https://sonarcloud.io/summary/new_code?id=Desarrollo-Web-2630_Proyecto1&amp;branch=main</a></li>
+<li>Issues en SonarQube Cloud:
+<a href="https://sonarcloud.io/project/issues?id=Desarrollo-Web-2630_Proyecto1" target="_blank" rel="noopener">https://sonarcloud.io/project/issues?id=Desarrollo-Web-2630_Proyecto1</a></li>
+</ul>
+<p>Capturas del análisis del 7/11 (rama main, commit b6dfca83), antes de
+la entrega final:</p>
+<figure class="wiki-figure">
+  <img src="/images/documentacion/sonarqube/sonar1.png" alt="Figura 1. Overview: Quality Gate en Passed, 57 issues, 0,0 % de duplicación y 88,5 % de cobertura." loading="lazy" />
+  <figcaption>Figura 1. Overview: Quality Gate en Passed, 57 issues, 0,0 % de duplicación y 88,5 % de cobertura.</figcaption>
+</figure>
+<figure class="wiki-figure">
+  <img src="/images/documentacion/sonarqube/sonar2.png" alt="Figura 2. Summary del código nuevo: 94,36 % de cobertura (mínimo 80 %), 0,0 % de duplicación (máximo 3 %), 30 issues nuevos." loading="lazy" />
+  <figcaption>Figura 2. Summary del código nuevo: 94,36 % de cobertura (mínimo 80 %), 0,0 % de duplicación (máximo 3 %), 30 issues nuevos.</figcaption>
+</figure>
+<figure class="wiki-figure">
+  <img src="/images/documentacion/sonarqube/sonar3.png" alt="Figura 3. Security snapshot: rating A, 0 issues de seguridad." loading="lazy" />
+  <figcaption>Figura 3. Security snapshot: rating A, 0 issues de seguridad.</figcaption>
+</figure>
+<figure class="wiki-figure">
+  <img src="/images/documentacion/sonarqube/sonar4.png" alt="Figura 4. Security Hotspots (0, rating A) y Reliability snapshot (rating D, 1 issue High)." loading="lazy" />
+  <figcaption>Figura 4. Security Hotspots (0, rating A) y Reliability snapshot (rating D, 1 issue High).</figcaption>
+</figure>
+<figure class="wiki-figure">
+  <img src="/images/documentacion/sonarqube/sonar5.png" alt="Figura 5. Maintainability snapshot: rating A, 56 issues y su evolución desde el 22/09/2026." loading="lazy" />
+  <figcaption>Figura 5. Maintainability snapshot: rating A, 56 issues y su evolución desde el 22/09/2026.</figcaption>
+</figure>
+<figure class="wiki-figure">
+  <img src="/images/documentacion/sonarqube/sonar6.png" alt="Figura 6. Único issue de severidad alta: &quot;Save and re-use this Random&quot; en EmpresaService.java, línea 151." loading="lazy" />
+  <figcaption>Figura 6. Único issue de severidad alta: "Save and re-use this Random" en EmpresaService.java, línea 151.</figcaption>
+</figure>
+<figure class="wiki-figure">
+  <img src="/images/documentacion/sonarqube/sonar7.png" alt="Figura 7. Issue de seguridad H-05 (java:S4502) en SecurityConfig.java, detectado después de integrar Spring Security." loading="lazy" />
+  <figcaption>Figura 7. Issue de seguridad H-05 (java:S4502) en SecurityConfig.java, detectado después de integrar Spring Security.</figcaption>
+</figure>
+<p>Capturas del análisis del 16/11 (rama main), con Spring Security
+integrado:</p>
+<figure class="wiki-figure">
+  <img src="/images/documentacion/sonarqube/sonar8.png" alt="Figura 8. Overview del 16/11: Quality Gate en Passed, 58 issues, 0,0 % de duplicación y 89,5 % de cobertura (+4,3 %)." loading="lazy" />
+  <figcaption>Figura 8. Overview del 16/11: Quality Gate en Passed, 58 issues, 0,0 % de duplicación y 89,5 % de cobertura (+4,3 %).</figcaption>
+</figure>
+<figure class="wiki-figure">
+  <img src="/images/documentacion/sonarqube/sonar9.png" alt="Figura 9. Security snapshot: rating A y 0 issues de seguridad abiertos después de aceptar H-05." loading="lazy" />
+  <figcaption>Figura 9. Security snapshot: rating A y 0 issues de seguridad abiertos después de aceptar H-05.</figcaption>
+</figure>
+<figure class="wiki-figure">
+  <img src="/images/documentacion/sonarqube/sonar10.png" alt="Figura 10. Security Hotspots: 0 hotspots, rating de revisión A." loading="lazy" />
+  <figcaption>Figura 10. Security Hotspots: 0 hotspots, rating de revisión A.</figcaption>
+</figure>
+<figure class="wiki-figure">
+  <img src="/images/documentacion/sonarqube/sonar11.png" alt="Figura 11. Reliability snapshot: rating A y 0 issues (-100 %) tras corregir H-01." loading="lazy" />
+  <figcaption>Figura 11. Reliability snapshot: rating A y 0 issues (-100 %) tras corregir H-01.</figcaption>
+</figure>
+<figure class="wiki-figure">
+  <img src="/images/documentacion/sonarqube/sonar12.png" alt="Figura 12. Maintainability snapshot: rating A, 58 issues y su evolución desde el 22/09/2026." loading="lazy" />
+  <figcaption>Figura 12. Maintainability snapshot: rating A, 58 issues y su evolución desde el 22/09/2026.</figcaption>
+</figure>
