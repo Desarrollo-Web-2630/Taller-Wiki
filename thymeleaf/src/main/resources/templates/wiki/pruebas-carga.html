@@ -1,0 +1,253 @@
+<h2>Ficha del documento</h2>
+<table>
+<thead>
+<tr>
+<th>Dato</th>
+<th>Información</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Institución / asignatura</td>
+<td>Pontificia Universidad Javeriana · Desarrollo Web</td>
+</tr>
+<tr>
+<td>Nombre del proyecto</td>
+<td>Sistema de Gestión de Procesos multiempresa: visor y editor de procesos empresariales (BPMN)</td>
+</tr>
+<tr>
+<td>Equipo / integrantes</td>
+<td>Héctor Estrada, Mariana Osorio, Iván Pardo, Sebastián Velásquez</td>
+</tr>
+<tr>
+<td>Docente</td>
+<td>Pablo Márquez</td>
+</tr>
+<tr>
+<td>Versión / fecha</td>
+<td>Versión 1.0 · 22 de noviembre de 2026</td>
+</tr>
+<tr>
+<td>Enlace al repositorio</td>
+<td>Backend: github.com/Desarrollo-Web-2630/Proyecto1 · Frontend: github.com/Desarrollo-Web-2630/Proyecto2</td>
+</tr>
+</tbody>
+</table>
+<h2>1. Objetivo y alcance</h2>
+<p><strong>Objetivo medible de la prueba: </strong>comprobar que la API REST del editor atiende 100 usuarios concurrentes autenticados con JWT con un p95 de hasta 500 ms por operación y menos de 1 % de errores, y encontrar dónde empieza a degradarse el rendimiento con una prueba de estrés de 200 usuarios.</p>
+<p><strong>Flujos BPMN o endpoints que serán evaluados: </strong>el recorrido de un usuario que entra, consulta sus procesos, crea uno y trabaja en el editor:</p>
+<ul>
+<li>POST /api/auth/login: una vez por usuario virtual; el JWT viaja luego en el encabezado Authorization.</li>
+<li>GET /api/v1/procesos (listar) y GET /api/v1/procesos/buscar?page=0&amp;size=10 (búsqueda paginada).</li>
+<li>POST /api/v1/procesos (crear proceso) y GET /api/v1/procesos/{id} (detalle del proceso creado).</li>
+<li>GET /api/v1/procesos/{id}/actividades: carga del lienzo del editor BPMN.</li>
+<li>POST /api/v1/procesos/{id}/actividades/{actividadId}/mover: guarda el drag and drop de una actividad.</li>
+</ul>
+<p><strong>Ambiente y características de infraestructura: </strong>ejecución local, con el generador de carga y el servidor en el mismo equipo.</p>
+<ul>
+<li>Equipo: portátil con Windows 10 Pro, Intel Core i7-4702MQ (4 núcleos, 8 hilos, 2,2 GHz) y 7,8 GB de RAM.</li>
+<li>Backend: Spring Boot 3.3.2 con Tomcat embebido, Java 21.0.10, ejecutado como jar con -Xmx1g y perfil h2 (base H2 en memoria en modo PostgreSQL). En este equipo no había Docker ni PostgreSQL; en producción la aplicación usa PostgreSQL 16 sobre Kubernetes.</li>
+<li>Generador: JMeter en la misma máquina, así que compite por CPU con el backend (ver cuellos de botella).</li>
+</ul>
+<h2>2. Escenarios y criterios</h2>
+<p><strong>Usuarios concurrentes esperados: </strong>el escenario objetivo es de 100 usuarios simultáneos (E3), por encima del uso esperado de una empresa pequeña o de un curso. También se midieron 20 (base), 50 (media) y 200 usuarios (estrés, el doble del objetivo).</p>
+<p><strong>Patrón de incremento de carga: </strong>rampa lineal: los usuarios arrancan repartidos durante 10, 20, 30 y 20 s. Cada usuario hace login una sola vez y luego repite 10 veces el ciclo de seis operaciones, con una pausa aleatoria de 100 a 300 ms entre acciones. E4 mete 200 usuarios en 20 s para provocar un pico.</p>
+<p><strong>Duración de cada escenario: </strong>medida por JMeter desde la primera hasta la última petición: E1 24,6 s, E2 33,4 s, E3 43,5 s y E4 38,8 s, con entre 1.226 y 12.206 peticiones por escenario (22.594 en total).</p>
+<p><strong>Umbrales de aceptación definidos por el equipo: </strong></p>
+<ul>
+<li>p95 de hasta 500 ms en cada operación de negocio; hasta 1.000 ms en el login, que usa BCrypt y es lento a propósito.</li>
+<li>Tasa de errores menor al 1 % (respuesta distinta de 200/201 o aserción fallida).</li>
+<li>CPU promedio del backend por debajo del 70 %.</li>
+<li>E3 (objetivo) debe cumplirlos todos; E4 es exploratorio y sirve para ubicar el límite.</li>
+</ul>
+<h2>3. Preparación y ejecución</h2>
+<p><strong>Herramienta empleada y versión: </strong>Apache JMeter 5.6.2, ejecutado con jmeter-maven-plugin 3.8.0 (Maven lo descarga, no hay que instalarlo), con el reporte HTML del propio JMeter. CPU y memoria medidas con un script de PowerShell que lee el proceso Java del backend una vez por segundo.</p>
+<p><strong>Datos de prueba utilizados: </strong>usuario admin@demo.com (rol ADMIN de «Empresa Demo»), creado por el inicializador de datos con la contraseña de la variable DEMO_ADMIN_PASSWORD. Un hilo de preparación (setUp Thread Group) crea por API un rol de proceso, el proceso «Editor carga», su pool de la empresa, una lane y una actividad, y comparte sus ids con todos los usuarios. Cada iteración crea un proceso con nombre único (marca de tiempo, hilo y contador) y mueve la actividad a coordenadas aleatorias (X de 0 a 600, Y de 0 a 200).</p>
+<p><strong>Configuración del script / enlace: </strong>plan thymeleaf/src/test/jmeter/plan-carga.jmx del repositorio Proyecto1. Se parametriza con usuarios, rampa, repeticiones, correo, clave, host y port (por defecto localhost:8080). Cada petición tiene una aserción del código de respuesta (200 o 201) y el token se extrae con un JSON Extractor ($.token).</p>
+<p><strong>Procedimiento de ejecución: </strong></p>
+<ol>
+<li>Compilar el backend: cd thymeleaf y ./mvnw -DskipTests package.</li>
+<li>Arrancar el backend con base limpia: java -Xmx1g -jar target/thymeleaf-0.0.1-SNAPSHOT.jar --spring.profiles.active=h2, con la variable DEMO_ADMIN_PASSWORD definida.</li>
+<li>Ejecutar cada escenario, por ejemplo E3: ./mvnw jmeter:configure jmeter:jmeter jmeter:results -Dcarga.usuarios=100 -Dcarga.rampa=30 -Dcarga.repeticiones=10 -Dcarga.clave=$DEMO_ADMIN_PASSWORD</li>
+<li>En paralelo, registrar CPU y memoria del proceso Java (una muestra por segundo).</li>
+<li>Revisar target/jmeter/reports/&lt;fecha-hora&gt;/plan-carga/index.html. Los cuatro escenarios se corrieron seguidos sobre la misma base, así que los datos creados se acumulan de uno a otro.</li>
+</ol>
+<h2>4. Resultados y análisis</h2>
+<p><strong>Latencia media, p95 y p99: </strong>totales del reporte de JMeter. E1: media 10,6 ms, p95 15 ms, p99 97 ms; E2: media 7,3 ms, p95 9 ms, p99 94 ms; E3: media 6,9 ms, p95 12 ms, p99 93 ms; E4: media 83,2 ms, p95 320 ms, p99 583 ms. Hasta 100 usuarios el p99 total (cerca de 95 ms) lo marca el login; las demás operaciones tienen un p99 por debajo de 40 ms. El detalle por operación está en la tabla «Detalle por operación».</p>
+<p><strong>Solicitudes por segundo / throughput: </strong>49,9, 91,6, 140,3 y 314,9 peticiones por segundo. El throughput crece casi en proporción a los usuarios: hasta 100 usuarios el servidor nunca fue el límite.</p>
+<p><strong>Tasa de errores: </strong>0 % en los cuatro escenarios (22.594 peticiones). En una primera corrida aparecieron respuestas 400 «Ya existe un proceso llamado…» al crear procesos (y por eso también en el detalle): el script repetía nombres entre corridas y el backend aplicó bien la regla de nombre único por empresa. Se corrigió el script y se repitieron todos los escenarios sobre una base limpia.</p>
+<p><strong>Consumo de CPU y memoria: </strong>CPU del proceso Java, como porcentaje de toda la máquina: promedio 8 %, 10 %, 9 %, 31 % y picos 33 %, 41 %, 33 %, 73 % (E1 a E4). Memoria (working set): promedio entre 161 y 203 MB, con un pico de 645 MB en E4, por debajo del límite de 1 GB; no hubo errores de memoria.</p>
+<p><strong>Cuellos de botella identificados: </strong></p>
+<ul>
+<li>Login: BCrypt tarda unos 94 ms por petición con poca carga y sube a 186 ms de mediana (p95 659 ms) con 200 usuarios. Es un costo de CPU intencional por seguridad; se mitiga porque cada usuario hace login una vez y reutiliza el JWT durante 60 minutos.</li>
+<li>GET /api/v1/procesos no está paginado: devuelve todos los procesos de la empresa, que durante E4 pasó de unos 1.700 a 3.700 procesos. Fue la operación más lenta (p95 385 ms, máximo 1,6 s) y movió unos 21 MB/s, frente a menos de 120 KB/s de las demás. El listado paginado (/buscar) responde mejor con el mismo volumen.</li>
+<li>Saturación a 200 usuarios: el p95 pasa de unos 10 ms a 320 ms sin errores. Las peticiones esperan turno en los hilos de Tomcat y en la CPU, que JMeter usaba al mismo tiempo.</li>
+</ul>
+<h2>5. Cierre</h2>
+<p><strong>Comparación con criterios de aceptación: </strong>se cumplen en los cuatro escenarios, incluido el de estrés. El p95 más alto por operación fue 385 ms (listar, E4) y el del login 659 ms, ambos bajo su umbral; 0 % de errores; CPU promedio máxima de 31 %. Aviso: en E4 el p99 de las operaciones de negocio (entre 514 y 643 ms) ya pasa de 500 ms, señal de que cerca de 200 usuarios simultáneos empieza la degradación en este equipo.</p>
+<p><strong>Acciones de mejora: </strong></p>
+<ul>
+<li>Que el frontend use el listado paginado, o paginar GET /api/v1/procesos: es la operación con más latencia y volumen.</li>
+<li>Repetir la prueba contra el despliegue en Kubernetes con PostgreSQL 16 y JMeter en otra máquina, para medir el ambiente real.</li>
+<li>Agregar al plan otras acciones del editor (crear arcos y gateways, reordenar lanes) y una prueba de duración de 15 a 30 minutos.</li>
+<li>Correr el plan en GitHub Actions con un umbral de p95 que haga fallar el pipeline.</li>
+</ul>
+<p><strong>Evidencias: gráficas, reportes y logs: </strong>reporte HTML de cada escenario (carpeta evidencias/jmeter-reportes/E1 a E4, abrir index.html), CSV de CPU y memoria por segundo (evidencias/jmeter-recursos) y las dos figuras siguientes.</p>
+<figure class="wiki-figure">
+  <img src="C:/Program Files/Git/images/documentacion/pruebas-carga/fig1.png" alt="Figura 1. Latencia p95, peticiones por segundo y CPU promedio del backend en los cuatro escenarios." loading="lazy" />
+  <figcaption>Figura 1. Latencia p95, peticiones por segundo y CPU promedio del backend en los cuatro escenarios.</figcaption>
+</figure>
+<figure class="wiki-figure">
+  <img src="C:/Program Files/Git/images/documentacion/pruebas-carga/fig2.png" alt="Figura 2. Tabla de estadísticas del reporte de JMeter para E4 (200 usuarios): 12.206 peticiones, 0 fallos." loading="lazy" />
+  <figcaption>Figura 2. Tabla de estadísticas del reporte de JMeter para E4 (200 usuarios): 12.206 peticiones, 0 fallos.</figcaption>
+</figure>
+<h3>Escenarios de carga</h3>
+<table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Operación</th>
+<th>Usuarios / rampa</th>
+<th>Duración</th>
+<th>Criterio</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>E1</td>
+<td>Flujo completo: login + 6 operaciones (carga base)</td>
+<td>20 usuarios / rampa 10 s, 10 iteraciones</td>
+<td>24,6 s</td>
+<td>p95 ≤ 500 ms y errores &lt; 1 %</td>
+</tr>
+<tr>
+<td>E2</td>
+<td>Flujo completo: login + 6 operaciones (carga media)</td>
+<td>50 usuarios / rampa 20 s, 10 iteraciones</td>
+<td>33,4 s</td>
+<td>p95 ≤ 500 ms y errores &lt; 1 %</td>
+</tr>
+<tr>
+<td>E3</td>
+<td>Flujo completo: login + 6 operaciones (objetivo)</td>
+<td>100 usuarios / rampa 30 s, 10 iteraciones</td>
+<td>43,5 s</td>
+<td>p95 ≤ 500 ms y errores &lt; 1 % (obligatorio)</td>
+</tr>
+<tr>
+<td>E4</td>
+<td>Flujo completo: login + 6 operaciones (estrés)</td>
+<td>200 usuarios / rampa 20 s, 10 iteraciones</td>
+<td>38,8 s</td>
+<td>p95 ≤ 500 ms y errores &lt; 1 % (exploratorio)</td>
+</tr>
+</tbody>
+</table>
+<h3>Resultados</h3>
+<table>
+<thead>
+<tr>
+<th>Escenario</th>
+<th>p95</th>
+<th>RPS</th>
+<th>Errores %</th>
+<th>Cumple / evidencia</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>E1 (20 usuarios)</td>
+<td>15 ms</td>
+<td>49,9</td>
+<td>0,00 %</td>
+<td>Sí · reporte E1/index.html</td>
+</tr>
+<tr>
+<td>E2 (50 usuarios)</td>
+<td>9 ms</td>
+<td>91,6</td>
+<td>0,00 %</td>
+<td>Sí · reporte E2/index.html</td>
+</tr>
+<tr>
+<td>E3 (100 usuarios)</td>
+<td>12 ms</td>
+<td>140,3</td>
+<td>0,00 %</td>
+<td>Sí · reporte E3/index.html</td>
+</tr>
+<tr>
+<td>E4 (200 usuarios)</td>
+<td>320 ms</td>
+<td>314,9</td>
+<td>0,00 %</td>
+<td>Sí (p99 583 ms) · reporte E4/index.html</td>
+</tr>
+</tbody>
+</table>
+<h3>Detalle por operación (p95 en ms)</h3>
+<table>
+<thead>
+<tr>
+<th>Operación</th>
+<th>E1</th>
+<th>E2</th>
+<th>E3</th>
+<th>E4</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>POST login</td>
+<td>156</td>
+<td>104</td>
+<td>105</td>
+<td>659</td>
+</tr>
+<tr>
+<td>GET listar procesos</td>
+<td>12</td>
+<td>10</td>
+<td>14</td>
+<td>385</td>
+</tr>
+<tr>
+<td>GET buscar procesos paginado</td>
+<td>15</td>
+<td>8</td>
+<td>8</td>
+<td>276</td>
+</tr>
+<tr>
+<td>POST crear proceso</td>
+<td>15</td>
+<td>9</td>
+<td>7</td>
+<td>274</td>
+</tr>
+<tr>
+<td>GET detalle proceso</td>
+<td>11</td>
+<td>6</td>
+<td>4</td>
+<td>286</td>
+</tr>
+<tr>
+<td>GET actividades del editor</td>
+<td>12</td>
+<td>7</td>
+<td>4</td>
+<td>294</td>
+</tr>
+<tr>
+<td>POST mover actividad (drag and drop)</td>
+<td>13</td>
+<td>8</td>
+<td>5</td>
+<td>317</td>
+</tr>
+</tbody>
+</table>
+<h2>Anexos y referencias</h2>
+<p>Repositorio / documentación: github.com/Desarrollo-Web-2630/Proyecto1, plan en thymeleaf/src/test/jmeter/plan-carga.jmx e instrucciones en README.md, sección «Pruebas de carga (JMeter)».</p>
+<p>Capturas, diagramas, reportes, logs u otras evidencias: carpeta Entrega_Final_Pruebas/evidencias: jmeter-reportes/E1 a E4 (reporte HTML), jmeter-recursos/recursos-E1 a E4.csv (CPU y memoria), grafica-escenarios-carga.png y jmeter-E4-estadisticas.png.</p>

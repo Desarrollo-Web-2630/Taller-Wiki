@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title th:text="${query != null and !query.isEmpty()} ? 'Buscar: ' + ${query} + ' - Wiki' : 'Buscar - Wiki'">Buscar - Wiki</title>
+    <link href="/css/scrollbar.css" rel="stylesheet" />
+    <link href="/css/navbar.css" rel="stylesheet" />
+    <link href="/css/sidebar.css" rel="stylesheet" />
+    <link href="/css/content.css" rel="stylesheet" />
+    <link href="/css/wiki.css" rel="stylesheet" />
+    <link href="/css/search.css" rel="stylesheet" />
+    <link href="/css/categories.css" rel="stylesheet" />
+  </head>
+  <body>
+    <div th:replace="~{fragments/navbar :: navbar}"></div>
+
+    <div class="wiki-layout wiki-layout--no-toc">
+      <div th:replace="~{fragments/sidebar :: sidebar(${navigation})}"></div>
+
+      <main class="wiki-content">
+        <h1>Buscador</h1>
+
+        <!-- Formulario principal: repite la caja para poder buscar sin usar la barra superior -->
+        <div th:replace="~{fragments/buscador :: buscador('page')}"></div>
+
+        <!-- Filtro por categoria: reenvia la misma consulta acotada a una etiqueta -->
+        <nav class="search-filters" aria-label="Filtrar por categoría">
+          <span class="search-filters-label">Filtrar por categoría:</span>
+          <a class="filter-chip"
+             th:classappend="${selectedCategory == null} ? ' filter-chip--active' : ''"
+             th:href="@{/wiki/buscar(q=${query})}">Todas</a>
+          <a th:each="category : ${categories}"
+             class="filter-chip"
+             th:classappend="${selectedCategory != null and selectedCategory == category.slug} ? ' filter-chip--active' : ''"
+             th:href="@{/wiki/buscar(q=${query}, categoria=${category.slug})}"
+             th:style="'--tag-color:' + ${category.color != null ? category.color : '#64748b'}"
+             th:text="${category.name}">Categoría</a>
+        </nav>
+
+        <!-- Estado inicial: aun no se ha buscado nada -->
+        <p class="search-empty" th:if="${query == null or query.isEmpty()}">
+          Escribe un término para buscar en los títulos, las etiquetas y el contenido de la wiki.
+        </p>
+
+        <!-- Resumen de resultados -->
+        <p class="search-summary" th:if="${query != null and !query.isEmpty()}">
+          <span th:if="${resultCount > 0}">
+            <strong th:text="${resultCount}">0</strong>
+            <span th:text="${resultCount == 1} ? ' resultado para ' : ' resultados para '"> resultados para </span>
+            <strong th:text="'“' + ${query} + '”'">consulta</strong>
+          </span>
+          <span th:if="${resultCount == 0}">
+            No se encontraron resultados para <strong th:text="'“' + ${query} + '”'">consulta</strong>
+          </span>
+          <span th:if="${activeCategory != null}">
+            en la categoría <strong th:text="${activeCategory.name}">Categoría</strong>
+          </span>
+        </p>
+
+        <!-- Sin resultados -->
+        <div class="search-noresults" th:if="${query != null and !query.isEmpty() and resultCount == 0}">
+          <p>Sugerencias:</p>
+          <ul>
+            <li>Revisa la ortografía del término.</li>
+            <li>Prueba con palabras más generales o con menos palabras.</li>
+            <li th:if="${activeCategory != null}">
+              Quita el filtro de categoría y
+              <a th:href="@{/wiki/buscar(q=${query})}">busca en toda la wiki</a>.
+            </li>
+            <li>Explora el <a href="/wiki/categorias">índice de categorías</a>.</li>
+          </ul>
+        </div>
+
+        <!-- Lista de resultados -->
+        <ol class="search-results" th:if="${resultCount > 0}">
+          <li class="search-result" th:each="hit : ${results}">
+            <a class="search-result-title"
+               th:href="${hit.entry.url}"
+               th:utext="${hit.highlightedTitle}">Título</a>
+            <span class="search-result-url" th:text="${hit.entry.url}">/wiki/...</span>
+            <p class="search-result-snippet" th:utext="${hit.snippet}">Fragmento…</p>
+            <div th:replace="~{fragments/etiquetas :: etiquetas(${hit.entry.categories})}"></div>
+          </li>
+        </ol>
+      </main>
+    </div>
+
+    <script src="/js/buscador.js" defer></script>
+  </body>
+</html>

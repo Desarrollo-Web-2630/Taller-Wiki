@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Categorías - Wiki</title>
+    <link href="/css/scrollbar.css" rel="stylesheet" />
+    <link href="/css/navbar.css" rel="stylesheet" />
+    <link href="/css/sidebar.css" rel="stylesheet" />
+    <link href="/css/content.css" rel="stylesheet" />
+    <link href="/css/wiki.css" rel="stylesheet" />
+    <link href="/css/search.css" rel="stylesheet" />
+    <link href="/css/categories.css" rel="stylesheet" />
+  </head>
+  <body>
+    <div th:replace="~{fragments/navbar :: navbar}"></div>
+
+    <div class="wiki-layout wiki-layout--no-toc">
+      <div th:replace="~{fragments/sidebar :: sidebar(${navigation})}"></div>
+
+      <main class="wiki-content">
+        <h1>Categorías</h1>
+        <p>
+          Las entradas de la wiki están etiquetadas por tema. Elige una categoría
+          para ver todo el contenido relacionado, o usa el
+          <a href="/wiki/buscar">buscador</a> para filtrar por texto y etiqueta a la vez.
+        </p>
+
+        <div class="category-grid">
+          <a class="category-card"
+             th:each="summary : ${summaries}"
+             th:href="@{'/wiki/categorias/' + ${summary.category.slug}}"
+             th:style="'--tag-color:' + ${summary.category.color != null ? summary.category.color : '#64748b'}">
+            <span class="category-card-dot" aria-hidden="true"></span>
+            <span class="category-card-name" th:text="${summary.category.name}">Categoría</span>
+            <span class="category-card-count">
+              <span th:text="${summary.entryCount}">0</span>
+              <span th:text="${summary.entryCount == 1} ? 'entrada' : 'entradas'">entradas</span>
+            </span>
+            <span class="category-card-description" th:text="${summary.category.description}">Descripción</span>
+          </a>
+        </div>
+
+        <p class="search-empty" th:if="${summaries == null or summaries.isEmpty()}">
+          Todavía no hay categorías definidas.
+        </p>
+      </main>
+    </div>
+
+    <script src="/js/buscador.js" defer></script>
+  </body>
+</html>

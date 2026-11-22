@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+
+<!--
+  fragments/buscador.html
+  Caja de busqueda reutilizable. Funciona sin JavaScript (envia el formulario
+  por GET a /wiki/buscar); buscador.js le añade sugerencias en vivo encima.
+
+  El parametro "id" hace unicos los identificadores cuando la caja aparece mas
+  de una vez en la misma pagina (barra superior y cuerpo del buscador).
+-->
+
+<form th:fragment="buscador(id)"
+      class="wiki-search"
+      action="/wiki/buscar"
+      method="get"
+      role="search"
+      autocomplete="off"
+      data-wiki-search>
+  <div class="wiki-search-field">
+    <svg class="wiki-search-icon" viewBox="0 0 20 20" aria-hidden="true" focusable="false">
+      <path d="M9 3.5a5.5 5.5 0 1 0 3.35 9.86l3.15 3.14a.75.75 0 1 0 1.06-1.06l-3.14-3.15A5.5 5.5 0 0 0 9 3.5Zm-4 5.5a4 4 0 1 1 8 0 4 4 0 0 1-8 0Z" />
+    </svg>
+
+    <label class="wiki-search-label" th:for="${'wiki-search-input-' + id}">Buscar en la wiki</label>
+    <input th:id="${'wiki-search-input-' + id}"
+           class="wiki-search-input"
+           type="search"
+           name="q"
+           placeholder="Buscar en la wiki..."
+           th:value="${query}"
+           role="combobox"
+           aria-expanded="false"
+           aria-autocomplete="list"
+           th:attr="aria-controls=${'wiki-search-suggestions-' + id}"
+           data-wiki-search-input />
+
+    <!-- Conserva el filtro de categoria al reenviar el formulario. -->
+    <input type="hidden"
+           name="categoria"
+           th:if="${selectedCategory != null}"
+           th:value="${selectedCategory}"
+           data-wiki-search-category />
+
+    <button class="wiki-search-button" type="submit">Buscar</button>
+  </div>
+
+  <ul th:id="${'wiki-search-suggestions-' + id}"
+      class="wiki-search-suggestions"
+      role="listbox"
+      aria-label="Sugerencias de busqueda"
+      hidden
+      data-wiki-search-suggestions></ul>
+</form>
+
+</html>
