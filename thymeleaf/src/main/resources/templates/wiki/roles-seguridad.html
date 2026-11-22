@@ -26,7 +26,7 @@ procesos empresariales (BPMN)</td>
 </tr>
 <tr>
 <td>Fecha / versión</td>
-<td>Versión 1.0 · 17 de noviembre de 2026</td>
+<td>Versión 1.1 · 22 de noviembre de 2026</td>
 </tr>
 <tr>
 <td>Repositorios</td>
@@ -39,9 +39,7 @@ Frontend: <a href="https://github.com/Desarrollo-Web-2630/Proyecto2" target="_bl
 <p><strong>Objetivo de seguridad del sistema BPMN:</strong> que solo los
 usuarios autenticados de una empresa accedan a la información de esa
 empresa, con las operaciones que permite su rol (ADMIN, EDITOR o
-LECTURA), y que ninguna empresa pueda ver ni modificar los procesos de
-otra. Los controles viven en el backend (Spring Security con JWT); el
-frontend solo adapta la interfaz al rol.</p>
+LECTURA), y que ninguna empresa pueda ver ni modificar los procesos de otra, salvo la lectura expresamente compartida con otra empresa. Los controles viven en el backend (Spring Security con JWT); el frontend adapta la interfaz al rol y a la compartición del proceso.</p>
 <p><strong>Activos y datos a proteger:</strong></p>
 <ul>
 <li><strong>Procesos y su diagrama</strong>: pools, lanes,
@@ -87,9 +85,7 @@ tres perfiles del enunciado (administrador, editor y solo lectura) y del
 principio de mínimo privilegio: cada rol tiene únicamente las
 operaciones que necesita. El rol es un atributo del usuario
 (Usuario.RolAcceso) y aplica solo dentro de su empresa. Estos roles de
-acceso son distintos de los roles de proceso (Analista, Supervisor,
-Auditor), que son elementos del diagrama asignados a las lanes y no
-otorgan permisos en la aplicación.</p>
+acceso son distintos de los roles de proceso (por ejemplo Empleado, Jefe inmediato y Talento Humano), que son elementos del diagrama asignados a las lanes y no otorgan permisos en la aplicación.</p>
 <p><strong>Responsabilidades por rol:</strong></p>
 <ul>
 <li><strong>ADMIN</strong>: administra la empresa, sus usuarios y los
@@ -257,10 +253,9 @@ actividades en una lane.</td>
 </tr>
 <tr>
 <td>Exportar o compartir procesos con otra empresa</td>
-<td>Todos</td>
-<td>No</td>
-<td>No aplica: no existe exportación ni compartición; cada proceso
-pertenece a una sola empresa.</td>
+<td>ADMIN (configura), invitados (leen)</td>
+<td>Parcial</td>
+<td>No hay exportación. La compartición la configura un ADMIN con PUT /api/v1/procesos/{id}/comparticion; la empresa invitada solo lee, sin escritura.</td>
 </tr>
 </tbody>
 </table>
@@ -312,8 +307,7 @@ cierra la sesión y envía al login.</li>
 <li>Si el backend responde 401, el interceptor cierra la sesión y
 redirige a /login?expirada=true con el aviso «Tu sesión
 venció».</li>
-<li>Cerrar sesión borra el token de sessionStorage; también se pierde
-al cerrar la pestaña.</li>
+<li>Cerrar sesión borra el token de sessionStorage y llama a POST /api/auth/logout, que revoca el jti del token en el servidor (tabla TokenRevocado); el token también se pierde al cerrar la pestaña.</li>
 </ul>
 <p><strong>Protección de credenciales y tokens:</strong></p>
 <ul>
@@ -334,8 +328,7 @@ que se aplican a todas las peticiones:</p>
 <ul>
 <li><strong>Reglas por ruta, método y rol</strong> en SecurityConfig
 (SecurityFilterChain): GET permitido a cualquier usuario autenticado;
-DELETE, usuarios, empresa, roles de proceso e inactivar o reactivar
-procesos solo ADMIN; el resto de escrituras ADMIN o EDITOR. Lo que no
+DELETE, usuarios, empresa, roles de proceso, inactivar o reactivar procesos, compartición de procesos y permisos por pool solo ADMIN; el resto de escrituras ADMIN o EDITOR. Lo que no
 está declarado exige autenticación
 (anyRequest().authenticated()).</li>
 <li><strong>Aislamiento por empresa</strong>: EmpresaActual.id() toma
@@ -346,10 +339,7 @@ se ignora.</li>
 <p><strong>Control de acceso a procesos BPMN propios y
 compartidos:</strong> los procesos pertenecen a la empresa, no a un
 usuario: cualquier usuario de la empresa los ve, y los modifica según su
-rol. No existe compartir procesos entre empresas. Cada operación sobre
-un proceso o un elemento del diagrama comprueba que pertenezca a la
-empresa del token; si es de otra empresa, la petición se rechaza sin
-devolver datos.</p>
+rol. La compartición entre empresas se configura con PUT /api/v1/procesos/{id}/comparticion (solo ADMIN de la empresa propietaria). La empresa invitada puede listar y consultar ese proceso en solo lectura, comprobado por GET /api/v1/procesos/{id}/acceso; cualquier escritura sigue restringida a la empresa propietaria. Cada operación comprueba la pertenencia del recurso; si no hay acceso, la petición se rechaza sin devolver datos.</p>
 <p><strong>Respuesta ante acceso no autorizado (401/403):</strong>
 respuestas JSON con el mismo formato { timestamp, status, mensaje },
 desde ManejadorErroresSeguridad (en el filtro) y GlobalExceptionHandler
@@ -666,7 +656,7 @@ TLS en el Ingress.</td>
 <td>Token alterado, vencido o firmado con otra clave</td>
 <td>Token rechazado</td>
 <td>Pasa</td>
-<td>JwtServicioTest (8 casos)</td>
+<td>JwtServicioTest (9 casos, incluye revocación)</td>
 </tr>
 <tr>
 <td>SEG-04</td>
@@ -780,9 +770,7 @@ inactivas o desactivadas pierden el acceso (SEG-04 a SEG-09).</p>
 <p><strong>Pruebas de acceso a recursos de otro usuario:</strong> se
 crean dos empresas con sus administradores y se comprueba que el ADMIN
 de una no puede leer, borrar ni ver los datos de la otra, ni siquiera
-enviando un X-Empresa-Id falso (SEG-10 a SEG-12). Las pruebas de
-controlador verifican que un administrador no puede modificar su propia
-cuenta (SEG-16).</p>
+enviando un X-Empresa-Id falso (SEG-10 a SEG-12). Las pruebas de compartición verifican que la empresa invitada solo obtiene acceso de lectura y que la escritura sigue restringida al propietario. Las pruebas de controlador verifican que un administrador no puede modificar su propia cuenta (SEG-16).</p>
 <p><strong>Registro de hallazgos y correcciones:</strong></p>
 <ul>
 <li><strong>Empresa tomada de un encabezado</strong>: antes la
@@ -836,12 +824,10 @@ o túnel SSH.</li>
 <li>Sin recuperación de contraseña («olvidé mi contraseña»).</li>
 <li>Sin bloqueo por intentos fallidos de login ni limitación general
 de solicitudes.</li>
-<li>El JWT no se revoca en el servidor al cerrar sesión; lo mitigan
-la vigencia de 60 minutos y la comprobación de usuario activo en cada
-petición.</li>
+<li>El JWT vence a los 60 minutos y se revoca de inmediato en el servidor al cerrar sesión mediante POST /api/auth/logout (jti y TokenRevocado); además se rechaza a usuarios desactivados en cada petición.</li>
 <li>El token en sessionStorage es accesible a JavaScript: depende de
 mantener la aplicación libre de XSS.</li>
-<li>Sin registro de auditoría de accesos.</li>
+<li>Registro de auditoría: AuditoriaService registra los cambios de procesos, elementos y seguridad en HistorialCambio; se consulta en GET /api/v1/historial y GET /api/v1/procesos/{id}/historial.</li>
 <li>Envío de correo deshabilitado en el despliegue: el enlace de
 verificación se obtiene del log del backend.</li>
 </ul>

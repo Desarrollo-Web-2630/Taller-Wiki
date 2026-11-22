@@ -29,7 +29,7 @@ procesos empresariales (BPMN)</td>
 </tr>
 <tr>
 <td>Versión / fecha</td>
-<td><p>Versión 1.1 · 16 de noviembre de 2026</p>
+<td><p>Versión 1.2 · 22 de noviembre de 2026</p>
 <p>Análisis SonarQube Cloud: rama main, 16 de noviembre de 2026 (con
 Spring Security integrado)</p></td>
 </tr>
@@ -43,45 +43,37 @@ Spring Security integrado)</p></td>
 </tbody>
 </table>
 <h2>1. Alcance técnico</h2>
-<p><strong>Componentes frontend cubiertos:</strong> No aplica. No se
-hacen pruebas unitarias para el frontend.</p>
+<p><strong>Componentes frontend cubiertos:</strong> 4 archivos de prueba (api.interceptor.spec.ts, auth.guard.spec.ts, invitado.guard.spec.ts y rol.guard.spec.ts) con 17 casos en Karma/Jasmine.</p>
 <ul>
-<li>El frontend Angular (repositorio Proyecto2) no tiene pruebas
-unitarias y no se analiza en SonarQube Cloud. Todo lo que reporta este
-documento corresponde al backend (Proyecto1).</li>
+<li>El frontend Angular (repositorio Proyecto2) tiene 17 pruebas unitarias (Karma/Jasmine) para guards e interceptor, pero no se analiza en SonarQube Cloud. Las cifras de cobertura y los hallazgos de este documento corresponden al backend (Proyecto1); el recuento de pruebas incluye ambos repositorios cuando se indica.</li>
 <li>Las reglas de negocio, la validación de datos y la seguridad
 están en el backend. El frontend presenta la información y consume la
-API REST. Sus guards ocultan pantallas según el rol, pero no protegen
-nada por sí solos: cada petición se valida en el servidor con Spring
-Security.</li>
-<li>El funcionamiento del frontend se valida con las pruebas de
-extremo a extremo (E2E), descritas en el documento de Pruebas
-automatizadas.</li>
+API REST. Sus guards ocultan pantallas según el rol y la compartición del proceso, pero no protegen nada por sí solos: cada petición se valida en el servidor con Spring Security.</li>
+<li>Además de las 17 pruebas unitarias, el funcionamiento del frontend se valida con pruebas de extremo a extremo (E2E), descritas en el documento de Pruebas automatizadas.</li>
 </ul>
-<p><strong>Componentes backend cubiertos:</strong> Todo el backend
-Spring Boot del repositorio Proyecto1 (módulo thymeleaf), con 37 clases
-de prueba en el análisis del commit b6dfca83, más 2 de seguridad
-agregadas en la entrega final, organizadas igual que el código
-fuente:</p>
+<p><strong>Componentes backend cubiertos:</strong> Todo el backend Spring Boot del repositorio Proyecto1 (módulo thymeleaf), con 45 clases de prueba y 401 casos en el estado actual, organizadas igual que el código fuente:</p>
 <ul>
-<li><strong>services</strong> (15 clases): EmpresaService,
-UsuarioService, VerificacionCorreoService, CorreoService,
-ProcesoService, ActividadService, GatewayService, ArcoService,
-ElementoConectableService, RolProcesoService, UsoRolProcesoConLanes,
-UsoRolProcesoSinLanes, PoolService, LaneService y
-MensajeService.</li>
-<li><strong>controllers</strong> (14 clases): los 13 controladores
-REST y GlobalExceptionHandler.</li>
+<li><strong>services</strong>: EmpresaService, UsuarioService,
+VerificacionCorreoService, CorreoService, ProcesoService,
+ActividadService, GatewayService, ArcoService,
+ElementoConectableService, RolProcesoService, PoolService, LaneService,
+MensajeService, AuditoriaService, AccesoProcesoService,
+ComparticionService y PermisoPoolService, además de
+UsoRolProcesoConLanes y UsoRolProcesoSinLanes en pruebas.</li>
+<li><strong>controllers</strong>: un @WebMvcTest por controlador
+REST, incluidos los nuevos HistorialController,
+ComparticionController y PermisoPoolController (estos tres agrupados
+en NovedadesControllerTest), más GlobalExceptionHandler.</li>
 <li><strong>repository</strong>: ProcesoRepository (consultas
 personalizadas con filtro por empresa).</li>
 <li><strong>dto, model, util y config</strong>: DTO de petición y
 respuesta, entidades, PasswordUtil, EmpresaActual, DataInitializer y la
 configuración de OpenAPI.</li>
-<li><strong>security</strong> (2 clases, agregadas con Spring
-Security en la entrega final): JwtServicioTest (unitaria: generar y
-validar el token, token alterado, vencido o firmado con otra clave) y
-SeguridadIntegracionTest (integración: 22 casos de login, respuestas 401
-y 403 por rol, aislamiento entre empresas y CSRF).</li>
+<li><strong>security</strong> (2 clases): JwtServicioTest (9 casos:
+generar y validar el token, token alterado, vencido, firmado con otra
+clave y revocación) y SeguridadIntegracionTest (integración: 22 casos de
+login, respuestas 401 y 403 por rol, aislamiento entre empresas y
+CSRF).</li>
 </ul>
 <p><strong>Frameworks de prueba y versiones:</strong> Java 17 y Spring
 Boot 3.3.2. Las versiones de las librerías de prueba las fija el BOM de
@@ -95,8 +87,7 @@ autenticación con JWT y autorización por rol.</li>
 repositorio.</li>
 <li>JaCoCo 0.8.12 (jacoco-maven-plugin) para el reporte de
 cobertura.</li>
-<li>SonarScanner para Maven 3.11.0.3922
-(sonar-maven-plugin).</li>
+<li>SonarScanner para Maven 3.11.0.3922 (sonar-maven-plugin). Frontend: Karma y Jasmine con ChromeHeadless, 17 casos en 4 archivos .spec.ts.</li>
 </ul>
 <p><strong>Estrategia de mocks / fixtures:</strong> Se usa un tipo de
 aislamiento según la capa:</p>
@@ -136,7 +127,7 @@ consultas propias del repositorio y PasswordUtil, por ser código
 sensible de seguridad.</li>
 </ul>
 <p><strong>Casos representativos:</strong> La tabla "Casos unitarios"
-resume 17 de los 334 casos, uno o dos por regla de negocio. Los nombres
+resume 17 de los 401 casos, uno o dos por regla de negocio. Los nombres
 de los métodos de prueba siguen el patrón
 metodo_escenario_resultadoEsperado, por ejemplo
 crearArco_entreActividadesDeDistintoPool_lanzaExcepcion.</p>
@@ -151,11 +142,12 @@ thymeleaf del repositorio Proyecto1 (en Windows se usa mvnw.cmd):</p>
 el XML que lee SonarQube Cloud en
 target/site/jacoco/jacoco.xml.</li>
 </ul>
-<p><strong>Resultados, cobertura y exclusiones justificadas:</strong> La
-rama main tiene 334 casos de prueba en 37 clases. La última corrida
-analizada (commit b6dfca83) terminó con todas las pruebas en verde: mvn
-verify habría fallado y no se habría generado el análisis si alguna
-prueba fallara.</p>
+<p><strong>Resultados, cobertura y exclusiones justificadas:</strong> El
+backend tiene 401 casos de prueba en 45 clases y el frontend 17 casos en
+4 archivos; todas las pruebas pasan en la corrida actual. La última
+corrida analizada en SonarQube (commit b6dfca83) también terminó con
+todas las pruebas en verde: mvn verify habría fallado y no se habría
+generado el análisis si alguna prueba fallara.</p>
 <ul>
 <li>Cobertura total: <strong>89,5 %</strong> (+4,3 % frente al
 análisis anterior, que tenía 88,5 %).</li>
@@ -446,8 +438,7 @@ verificación</td>
 </tr>
 </tbody>
 </table>
-<p>17 de 334 casos. El listado completo está en thymeleaf/src/test/java
-del repositorio Proyecto1.</p>
+<p>17 de 401 casos del backend. El listado completo está en thymeleaf/src/test/java del repositorio Proyecto1 y en front/src/app/**/*.spec.ts del repositorio Proyecto2.</p>
 <h2>7. Indicadores SonarQube</h2>
 <table>
 <thead>
@@ -515,15 +506,13 @@ del repositorio Proyecto1.</p>
 </tr>
 <tr>
 <td>Pruebas unitarias</td>
-<td>334 casos en 37 clases (7/11)</td>
+<td>401 casos en 45 clases (backend) + 17 (frontend)</td>
 <td>Todas pasan</td>
 <td>Sí</td>
 </tr>
 </tbody>
 </table>
-<p>Valores del análisis del 16/11/2026, con Spring Security integrado.
-La cobertura y la duplicación del código nuevo, y el número de pruebas,
-son del análisis del 7/11 (commit b6dfca83).</p>
+<p>Cobertura, duplicación e issues corresponden al análisis del 16/11/2026 (rama main, con Spring Security integrado). El recuento de pruebas se actualizó al estado actual: 401 en backend y 17 en frontend; el código nuevo de auditoría, compartición, permisos y revocación aún no ha sido reanalizado en SonarQube.</p>
 <h2>8. Hallazgos</h2>
 <table>
 <thead>
