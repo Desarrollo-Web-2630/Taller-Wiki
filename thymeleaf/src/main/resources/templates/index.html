@@ -8,6 +8,8 @@
     <link href="/css/navbar.css" rel="stylesheet" />
     <link href="/css/sidebar.css" rel="stylesheet" />
     <link href="/css/content.css" rel="stylesheet" />
+    <link href="/css/search.css" rel="stylesheet" />
+    <link href="/css/categories.css" rel="stylesheet" />
   </head>
   <body class="landing-page">
     <div th:replace="~{fragments/navbar :: navbar}"></div>
@@ -57,7 +59,30 @@
           </p>
           <a href="/wiki/entregas">Ver entregas</a>
         </article>
+
+        <article class="info-card">
+          <span class="card-badge">Búsqueda</span>
+          <h2>Buscador</h2>
+          <p>
+            Busca por título, etiqueta o contenido de cualquier entrada. Cada
+            resultado muestra el fragmento donde aparece el término y se puede
+            acotar por categoría.
+          </p>
+          <a href="/wiki/buscar">Ir al buscador</a>
+        </article>
+
+        <article class="info-card">
+          <span class="card-badge">Organización</span>
+          <h2>Categorías</h2>
+          <p>
+            Todas las entradas están etiquetadas por tema. Consulta el índice de
+            categorías para recorrer la wiki por áreas en lugar de por jerarquía.
+          </p>
+          <a href="/wiki/categorias">Ver categorías</a>
+        </article>
       </section>
     </main>
+
+    <script src="/js/buscador.js" defer></script>
   </body>
 </html>

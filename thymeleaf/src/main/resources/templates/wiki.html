@@ -10,6 +10,8 @@
     <link href="/css/content.css" rel="stylesheet" />
     <link href="/css/toc.css" rel="stylesheet" />
     <link href="/css/wiki.css" rel="stylesheet" />
+    <link href="/css/search.css" rel="stylesheet" />
+    <link href="/css/categories.css" rel="stylesheet" />
   </head>
   <body>
     <div th:replace="~{fragments/navbar :: navbar}"></div>
@@ -19,6 +21,13 @@
 
       <main class="wiki-content" th:if="${content != null}">
         <h1 th:text="${entry?.title} ?: 'Wiki'">Wiki</h1>
+
+        <!-- Etiquetas de la entrada actual -->
+        <div class="article-tags" th:if="${entry != null and entry.hasCategories()}">
+          <span class="article-tags-label">Etiquetas:</span>
+          <div th:replace="~{fragments/etiquetas :: etiquetas(${entry.categories})}"></div>
+        </div>
+
         <div th:utext="${content}">Article content</div>
       </main>
 
@@ -32,5 +41,7 @@
         </ul>
       </aside>
     </div>
+
+    <script src="/js/buscador.js" defer></script>
   </body>
 </html>

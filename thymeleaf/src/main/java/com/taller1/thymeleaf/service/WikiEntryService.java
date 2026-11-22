@@ -26,6 +26,12 @@ public class WikiEntryService {
 
     private final WikiEntryRepository repository;
 
+    /**
+     * Raiz de plantillas en disco. Coincide con spring.thymeleaf.prefix y con la
+     * ruta que copia el Dockerfile, por eso funciona igual en local y en el contenedor.
+     */
+    private static final String TEMPLATES_ROOT = "src/main/resources/templates";
+
     private static final Pattern HEADING_PATTERN =
         Pattern.compile("<(h[23])(?:\\s[^>]*)?>(.*?)</\\1>", Pattern.CASE_INSENSITIVE | Pattern.DOTALL);
 
@@ -52,7 +58,7 @@ public class WikiEntryService {
         }
 
         try {
-            Path filePath = Paths.get("src/main/resources/templates", entry.getContentPath());
+            Path filePath = resolveContentPath(entry);
             String html = Files.readString(filePath);
             String htmlWithAnchors = addIdsToHeadings(html);
             List<TocItem> toc = parseToc(htmlWithAnchors, entry);
@@ -102,6 +108,17 @@ public class WikiEntryService {
             .or(() -> repository.findByUrl(normalizeUrl(fullUrl)))
             .or(() -> repository.findByUrl(normalizeUrl(uri)))
             .or(() -> repository.findByUrl("http://localhost:8080" + uri));
+    }
+
+    /**
+     * Ruta en disco del fichero de contenido de una entrada, o {@code null} si la
+     * entrada no tiene contenido asociado. Reutilizada por el buscador para indexar.
+     */
+    public Path resolveContentPath(WikiEntry entry) {
+        if (entry == null || entry.getContentPath() == null || entry.getContentPath().isBlank()) {
+            return null;
+        }
+        return Paths.get(TEMPLATES_ROOT, entry.getContentPath());
     }
 
     public List<TocItem> parseToc(String html, WikiEntry currentEntry) {
