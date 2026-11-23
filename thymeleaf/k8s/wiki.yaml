@@ -1,0 +1,112 @@
+# Wiki Thymeleaf (Taller-Wiki). __OWNER__ lo reemplaza el workflow al desplegar.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: procesos-wiki
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: procesos-wiki
+  template:
+    metadata:
+      labels:
+        app: procesos-wiki
+    spec:
+      imagePullSecrets:
+        - name: ghcr-secret
+      containers:
+        - name: procesos-wiki
+          image: ghcr.io/__OWNER__/procesos-wiki:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8080
+          env:
+            - name: JAVA_TOOL_OPTIONS
+              value: "-XX:MaxRAMPercentage=75"
+          readinessProbe:
+            httpGet:
+              path: /wiki/inicio
+              port: 8080
+            initialDelaySeconds: 15
+            periodSeconds: 10
+            failureThreshold: 12
+          livenessProbe:
+            httpGet:
+              path: /wiki/inicio
+              port: 8080
+            initialDelaySeconds: 90
+            periodSeconds: 20
+            failureThreshold: 3
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              memory: 512Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: procesos-wiki
+spec:
+  type: NodePort
+  selector:
+    app: procesos-wiki
+  ports:
+    - protocol: TCP
+      port: 8080
+      targetPort: 8080
+      nodePort: 30080
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: procesos-wiki
+spec:
+  ingressClassName: public
+  rules:
+    - http:
+        paths:
+          - path: /wiki
+            pathType: Prefix
+            backend:
+              service:
+                name: procesos-wiki
+                port:
+                  number: 8080
+          - path: /api/wiki
+            pathType: Prefix
+            backend:
+              service:
+                name: procesos-wiki
+                port:
+                  number: 8080
+          - path: /contacto
+            pathType: Prefix
+            backend:
+              service:
+                name: procesos-wiki
+                port:
+                  number: 8080
+          - path: /css
+            pathType: Prefix
+            backend:
+              service:
+                name: procesos-wiki
+                port:
+                  number: 8080
+          - path: /js
+            pathType: Prefix
+            backend:
+              service:
+                name: procesos-wiki
+                port:
+                  number: 8080
+          - path: /images
+            pathType: Prefix
+            backend:
+              service:
+                name: procesos-wiki
+                port:
+                  number: 8080
