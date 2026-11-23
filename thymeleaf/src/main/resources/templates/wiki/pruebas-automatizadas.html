@@ -24,8 +24,8 @@
 <td>Pablo Márquez</td>
 </tr>
 <tr>
-<td>Versión / fecha</td>
-<td>Versión 1.0 · 22 de noviembre de 2026</td>
+<td>Fecha</td>
+<td>22 de noviembre de 2026</td>
 </tr>
 <tr>
 <td>Enlace al repositorio</td>
@@ -34,69 +34,93 @@
 </tbody>
 </table>
 <h2>1. Objetivo y estrategia</h2>
-<p><strong>Procesos del modelador BPMN a automatizar: </strong>los flujos que un usuario hace de punta a punta en el navegador:</p>
+<p><strong>Procesos del modelador BPMN a automatizar: </strong>automatizamos lo que hace una persona en el navegador de principio a fin:</p>
 <ul>
-<li>Iniciar y cerrar sesión con JWT, y protección de rutas sin sesión.</li>
-<li>Crear procesos, validar el formulario, rechazar nombres repetidos y buscar en el listado paginado.</li>
-<li>Modelar en el editor: arrastrar el pool de la empresa, una lane, actividades, conectarlas con un arco y mover una actividad con drag and drop, comprobando que todo queda guardado al recargar.</li>
-<li>Control de acceso: rol LECTURA en solo lectura y aislamiento de la información entre empresas.</li>
+<li>Iniciar y cerrar sesión, y que las páginas internas no abran sin sesión.</li>
+<li>Crear procesos, las validaciones del formulario, el error por nombre repetido y la búsqueda.</li>
+<li>Modelar en el editor: arrastrar el pool, una lane y actividades desde la paleta, unirlas con un arco y mover una actividad, revisando que todo siga ahí al recargar la página.</li>
+<li>Permisos: que el rol de lectura no pueda editar y que una empresa no vea los procesos de otra.</li>
 </ul>
-<p><strong>Tipos de pruebas: UI, API, integración, extremo a extremo: </strong></p>
+<p><strong>Tipos de pruebas: UI, API, integración, extremo a extremo: </strong>el foco de este documento son las pruebas de extremo a extremo, pero el proyecto tiene varias capas:</p>
 <ul>
-<li>Extremo a extremo (sistema): 14 casos con Selenium WebDriver sobre la aplicación completa (Chrome → Angular → API REST → Spring Security → JPA).</li>
-<li>Integración de API: 22 casos de SeguridadIntegracionTest con la cadena real de Spring Security sobre H2, más los tests de controladores con MockMvc.</li>
-<li>Unitarias: servicios, DTO y modelo del backend (401 pruebas en total con las de integración) y 17 pruebas del frontend (interceptor, guards y servicios) con Jasmine y Karma.</li>
-<li>API manual: colección de Postman. Carga: JMeter (documento 04).</li>
+<li>Extremo a extremo: 14 casos con Selenium WebDriver sobre la aplicación completa, desde el navegador hasta la base de datos.</li>
+<li>Integración de la API: los 22 casos de SeguridadIntegracionTest, que usan la configuración real de Spring Security, y las pruebas de los controladores con MockMvc.</li>
+<li>Unitarias: 401 pruebas en el backend (contando las de integración) y 17 en el frontend con Jasmine y Karma.</li>
+<li>Además, la colección de Postman para probar la API a mano y JMeter para la carga (documento 04).</li>
 </ul>
-<p><strong>Herramientas y versiones: </strong>Selenium WebDriver 4.53.0 para Java (Selenium Manager descarga el chromedriver de Chrome 157), JUnit 5 y AssertJ de Spring Boot 3.3.2, Maven Surefire 3.2.5, Java 21 (compila a 17), Angular 20.3 con Jasmine 5.9 y Karma 6.4, Node 24.21 y JMeter 5.6.2. Se eligió WebDriver en código y no Selenium IDE: el IDE sigue en beta desde 2024 y graba localizadores frágiles, y el editor usa drag and drop nativo de HTML5, que ni el IDE ni las Actions de WebDriver disparan. Con código se resolvió con un helper, Page Objects y datos controlados.</p>
+<p><strong>Herramientas y versiones: </strong>Selenium WebDriver 4.53.0 para Java, que descarga solo el driver del Chrome instalado (Chrome 157), JUnit 5 y AssertJ (los que trae Spring Boot 3.3.2), Maven Surefire 3.2.5 y Java 21. En el frontend, Angular 20.3 con Jasmine 5.9 y Karma 6.4. Elegimos escribir las pruebas con WebDriver y no grabarlas con Selenium IDE por dos razones: el IDE lleva en beta desde 2024 y graba selectores que se rompen fácil, y el editor usa el drag and drop nativo de HTML5, que el IDE no logra reproducir. Con código pudimos resolverlo con un método propio.</p>
 <h2>2. Diseño de suites</h2>
-<p><strong>Estructura de archivos y suites: </strong>todo en thymeleaf/src/test/java/com/proyecto1/thymeleaf/e2e (repositorio Proyecto1), marcado con @Tag("e2e"). En el inventario, las rutas son relativas a thymeleaf/src/test/java/com/proyecto1/thymeleaf:</p>
+<p><strong>Estructura de archivos y suites: </strong>todas las pruebas están en thymeleaf/src/test/java/com/proyecto1/thymeleaf/e2e (repositorio Proyecto1) y llevan la etiqueta e2e. En el inventario de abajo las rutas empiezan desde thymeleaf/src/test/java/com/proyecto1/thymeleaf.</p>
 <ul>
-<li>E2EBase: arranca el backend, prepara los datos y abre y cierra Chrome en cada prueba.</li>
-<li>Page Objects: PaginaLogin, PaginaProcesos, PaginaFormularioProceso y PaginaEditor; las pruebas no tocan selectores directamente.</li>
-<li>Utilidades: ArrastrarYSoltar (drag and drop HTML5) y EvidenciaE2E (captura de pantalla al final de cada caso).</li>
-<li>Suites: AutenticacionE2ETest (4 casos), ProcesosE2ETest (4), EditorProcesoE2ETest (2) y ControlAccesoE2ETest (4).</li>
+<li>E2EBase arranca el backend, prepara los datos y abre y cierra Chrome en cada prueba.</li>
+<li>Una clase por pantalla (PaginaLogin, PaginaProcesos, PaginaFormularioProceso y PaginaEditor), siguiendo el patrón Page Object. Así las pruebas no dependen directamente de los selectores.</li>
+<li>ArrastrarYSoltar hace el drag and drop y EvidenciaE2E guarda una captura al final de cada caso.</li>
+<li>Cuatro suites: AutenticacionE2ETest (4 casos), ProcesosE2ETest (4), EditorProcesoE2ETest (2) y ControlAccesoE2ETest (4).</li>
 </ul>
-<p><strong>Casos priorizados: </strong>alta: E2E-01, 03, 09, 10, 11, 13 y 14 (seguridad, aislamiento y núcleo del editor); media: E2E-02, 04, 05, 06, 07 y 12 (errores, validaciones y guards); baja: E2E-08 (búsqueda).</p>
-<p><strong>Preparación y limpieza de datos: </strong>la prueba arranca el backend con @SpringBootTest en el puerto 8080 y perfil h2, así que cada corrida empieza con una base en memoria nueva y se borra sola al terminar. Antes de cada caso se crean, solo si faltan, el usuario lector@demo.com (LECTURA), la empresa «Otra Empresa SAS» con su administrador y un proceso privado, y un rol de proceso. Las pruebas que crean datos usan nombres únicos, así no dependen del orden. Cada caso abre un Chrome nuevo, sin sesión ni token.</p>
+<p><strong>Casos priorizados: </strong>dimos prioridad alta a la seguridad y al editor (E2E-01, 03, 09, 10, 11, 13 y 14). Los mensajes de error, las validaciones y los permisos de rutas quedaron en prioridad media (E2E-02, 04, 05, 06, 07 y 12), y la búsqueda en baja (E2E-08).</p>
+<p><strong>Preparación y limpieza de datos: </strong>la propia prueba levanta el backend en el puerto 8080 con la base H2 en memoria, así que cada corrida empieza limpia y no queda basura al terminar. Antes de cada caso se crean, si no existen, un usuario de solo lectura, una segunda empresa con su administrador y un proceso privado, y un rol de proceso. Las pruebas que crean procesos les ponen nombres únicos para no depender del orden, y cada caso abre un Chrome nuevo, sin sesión.</p>
 <p><strong>Identificadores / selectores y estabilidad de scripts: </strong></p>
 <ul>
-<li>Se agregaron atributos data-testid al frontend (login-correo, fila-proceso, paleta-ACTIVIDAD, tablero, actividad, arco, dialogo-guardar…), que no cambian con estilos ni textos.</li>
-<li>Solo esperas explícitas (WebDriverWait de 10 s, ningún Thread.sleep) y tolerancia a StaleElementReferenceException, porque Angular vuelve a pintar listas y nodos.</li>
-<li>El drag and drop se simula con los eventos reales del navegador (dragstart, dragover, drop) y deja correr un ciclo de detección de cambios de Angular entre ellos; las posiciones se calculan respecto al lienzo.</li>
-<li>El caso de mover una actividad verifica la nueva posición en la base de datos y otra vez en pantalla tras recargar.</li>
+<li>Agregamos atributos data-testid en el frontend (login-correo, fila-proceso, paleta-ACTIVIDAD, tablero, actividad, arco, dialogo-guardar, entre otros), que no cambian si se cambia el diseño o los textos.</li>
+<li>Solo usamos esperas explícitas de hasta 10 s, nunca pausas fijas, y reintentamos cuando Angular vuelve a dibujar un elemento (StaleElementReferenceException).</li>
+<li>Las acciones de Selenium no disparan el drag and drop de HTML5, así que lanzamos los mismos eventos que el navegador (dragstart, dragover y drop), dejando que Angular actualice la pantalla entre uno y otro.</li>
+<li>En la prueba de mover una actividad revisamos la nueva posición en la base de datos y otra vez en pantalla después de recargar.</li>
 </ul>
 <h2>3. Ejecución</h2>
 <p><strong>Comandos para ejecutar suites: </strong></p>
 <ol>
-<li>Frontend (otra terminal): cd front, npm ci y npx ng serve (queda en http://localhost:4200).</li>
-<li>Suite E2E completa: cd thymeleaf y ./mvnw test -Pe2e (el backend lo arranca la propia prueba).</li>
-<li>Una sola suite: ./mvnw test -Pe2e -Dtest=EditorProcesoE2ETest. Ver el navegador: -De2e.headless=false.</li>
-<li>Unitarias e integración del backend: ./mvnw test (excluye las E2E). Frontend: npx ng test --watch=false --browsers=ChromeHeadless.</li>
+<li>En otra terminal, levantar el frontend: cd front, npm ci y npx ng serve (queda en http://localhost:4200).</li>
+<li>Correr todas las pruebas E2E: cd thymeleaf y ./mvnw test -Pe2e. El backend lo arranca la misma prueba.</li>
+<li>Correr una sola suite: ./mvnw test -Pe2e -Dtest=EditorProcesoE2ETest. Para ver el navegador mientras corre, agregar -De2e.headless=false.</li>
+<li>Las unitarias y de integración se corren con ./mvnw test, que deja fuera las E2E. Las del frontend, con npx ng test --watch=false --browsers=ChromeHeadless.</li>
 </ol>
-<p><strong>Ejecución local y en integración continua (CI): </strong>se ejecutó en local en Windows 10 con Chrome 157 en modo headless. El pipeline actual de GitHub Actions (deploy.yml) construye y publica la imagen sin correr pruebas (-DskipTests), así que hoy ninguna suite corre en CI. Queda propuesto un job en ubuntu-latest, que ya trae Chrome, que ejecute ./mvnw test, levante ng serve en segundo plano, ejecute ./mvnw test -Pe2e y publique target/e2e/capturas como artefacto.</p>
-<p><strong>Configuración y variables requeridas: </strong>propiedades e2e.headless (true por defecto) y e2e.front (http://localhost:4200). La prueba fija en el backend server.port=8080, app.demo.admin-password, app.jwt.secret, app.cors.origenes=http://localhost:4200 y app.mail.enabled=false. Requisitos: Chrome instalado, puerto 8080 libre, Node y Angular CLI, e internet la primera vez para que Selenium Manager descargue el chromedriver.</p>
-<p><strong>Frecuencia de ejecución: </strong>antes de cada merge a main y antes de cada entrega o despliegue, en local. Las unitarias y de integración se corren también al hacer el análisis de SonarQube (./mvnw verify sonar:sonar).</p>
+<p><strong>Ejecución local y en integración continua (CI): </strong>por ahora las corremos en local, en Windows 10 con Chrome sin ventana. El pipeline de GitHub Actions (deploy.yml) construye y publica la imagen con -DskipTests, o sea que hoy no corre ninguna prueba. Lo que proponemos es agregar un job en ubuntu-latest, que ya trae Chrome, que corra ./mvnw test, levante el frontend, corra ./mvnw test -Pe2e y guarde las capturas como artefacto.</p>
+<p><strong>Configuración y variables requeridas: </strong>se pueden cambiar dos propiedades: e2e.headless (true por defecto) y e2e.front (por defecto http://localhost:4200). La prueba configura el backend sola: puerto 8080, contraseña del admin de demo, clave del JWT, CORS para el frontend y correo desactivado. Hace falta tener Chrome, el puerto 8080 libre, Node con Angular CLI e internet la primera vez, para que Selenium descargue el driver.</p>
+<p><strong>Frecuencia de ejecución: </strong>antes de cada merge a main y antes de cada entrega o despliegue. Las unitarias y de integración también corren cada vez que hacemos el análisis de SonarQube (./mvnw verify sonar:sonar).</p>
 <h2>4. Resultados</h2>
-<p><strong>Casos ejecutados, aprobados y fallidos: </strong>E2E: 14 ejecutados, 14 aprobados y 0 fallidos en las tres últimas corridas (22/11/2026); la última se hizo sobre main ya integrado con los cambios de seguridad del equipo. Backend: 401 de 401. Frontend: 17 de 17.</p>
-<p><strong>Duración de ejecución: </strong>suite E2E: entre 75 y 107 s de pruebas (95 a 130 s contando compilación y arranque de Spring). Por suite: Autenticación 29-58 s (incluye el arranque del backend), Procesos 15-18 s, Editor 17-18 s y Control de acceso 13-14 s. Backend completo: 101 s con las 401 pruebas.</p>
-<p><strong>Fallos recurrentes e intermitentes: </strong>en la primera corrida fallaron E2E-05 y E2E-08 por sincronización: la prueba leía la tabla mientras Angular la volvía a pintar (lista vacía y StaleElementReferenceException). La captura mostraba la aplicación funcionando bien, así que el fallo era de la prueba. Se corrigió la espera y las tres corridas siguientes dieron 14 de 14, sin fallos intermitentes.</p>
-<p><strong>Evidencias: logs, video, reportes, capturas: </strong>una captura automática por caso (target/e2e/capturas, copiadas a evidencias/selenium), reportes XML y TXT de Surefire (target/surefire-reports) y el log de Maven de cada corrida.</p>
+<p><strong>Casos ejecutados, aprobados y fallidos: </strong>los 14 casos pasaron en las últimas cuatro corridas del 22 de noviembre. Las dos últimas se hicieron sobre main ya integrado con los cambios de seguridad del resto del equipo. El backend pasa 401 de 401 pruebas y el frontend 17 de 17.</p>
+<p><strong>Duración de ejecución: </strong>la suite completa tarda entre 75 y 107 s, o entre 95 y 130 s si se cuenta la compilación y el arranque de Spring. La suite de autenticación suele ser la más lenta (de 29 a 58 s) porque es la que arranca el backend; las demás tardan de 13 a 35 s. Las pruebas del backend sin E2E tardan unos 100 s.</p>
+<p><strong>Fallos recurrentes e intermitentes: </strong>en la primera corrida fallaron E2E-05 y E2E-08. Las capturas mostraban la aplicación funcionando bien: el problema era que la prueba leía la tabla de procesos mientras Angular la estaba volviendo a dibujar. Corregimos la espera y desde entonces no ha vuelto a fallar ninguna prueba.</p>
+<p><strong>Evidencias: logs, video, reportes, capturas: </strong>cada caso guarda una captura de pantalla al terminar (carpeta evidencias/selenium) y Maven deja los reportes de Surefire. La figura 1 es el reporte de la última corrida y las siguientes son capturas que tomó Selenium durante las pruebas.</p>
 <figure class="wiki-figure">
-  <img src="C:/Program Files/Git/images/documentacion/pruebas-automatizadas/fig1.png" alt="Figura 1. Captura automática de E2E-09: pool, lane, dos actividades y el arco creados por Selenium arrastrando desde la paleta, después de recargar la página." loading="lazy" />
-  <figcaption>Figura 1. Captura automática de E2E-09: pool, lane, dos actividades y el arco creados por Selenium arrastrando desde la paleta, después de recargar la página.</figcaption>
+  <img src="C:/Program Files/Git/images/documentacion/pruebas-automatizadas/fig1.png" alt="Figura 1. Reporte de Surefire de la última corrida: 14 pruebas, 0 errores, 0 fallos." loading="lazy" />
+  <figcaption>Figura 1. Reporte de Surefire de la última corrida: 14 pruebas, 0 errores, 0 fallos.</figcaption>
+</figure>
+<figure class="wiki-figure">
+  <img src="C:/Program Files/Git/images/documentacion/pruebas-automatizadas/fig2.png" alt="Figura 2. E2E-02: con una contraseña incorrecta aparece el error y no se entra." loading="lazy" />
+  <figcaption>Figura 2. E2E-02: con una contraseña incorrecta aparece el error y no se entra.</figcaption>
+</figure>
+<figure class="wiki-figure">
+  <img src="C:/Program Files/Git/images/documentacion/pruebas-automatizadas/fig3.png" alt="Figura 3. E2E-06: el formulario vacío muestra las tres validaciones y no guarda." loading="lazy" />
+  <figcaption>Figura 3. E2E-06: el formulario vacío muestra las tres validaciones y no guarda.</figcaption>
+</figure>
+<figure class="wiki-figure">
+  <img src="C:/Program Files/Git/images/documentacion/pruebas-automatizadas/fig4.png" alt="Figura 4. E2E-09: el diagrama que arma Selenium arrastrando desde la paleta (pool, lane, dos actividades y el arco), después de recargar." loading="lazy" />
+  <figcaption>Figura 4. E2E-09: el diagrama que arma Selenium arrastrando desde la paleta (pool, lane, dos actividades y el arco), después de recargar.</figcaption>
+</figure>
+<figure class="wiki-figure">
+  <img src="C:/Program Files/Git/images/documentacion/pruebas-automatizadas/fig5.png" alt="Figura 5. E2E-10: la actividad antes de arrastrarla y después de recargar. Se movió 200 px y la posición quedó guardada." loading="lazy" />
+  <figcaption>Figura 5. E2E-10: la actividad antes de arrastrarla y después de recargar. Se movió 200 px y la posición quedó guardada.</figcaption>
+</figure>
+<figure class="wiki-figure">
+  <img src="C:/Program Files/Git/images/documentacion/pruebas-automatizadas/fig6.png" alt="Figura 6. E2E-11: el usuario de lectura ve el editor en modo solo lectura y sin paleta." loading="lazy" />
+  <figcaption>Figura 6. E2E-11: el usuario de lectura ve el editor en modo solo lectura y sin paleta.</figcaption>
+</figure>
+<figure class="wiki-figure">
+  <img src="C:/Program Files/Git/images/documentacion/pruebas-automatizadas/fig7.png" alt="Figura 7. E2E-14: el administrador de otra empresa intenta abrir un proceso ajeno por la URL y no puede." loading="lazy" />
+  <figcaption>Figura 7. E2E-14: el administrador de otra empresa intenta abrir un proceso ajeno por la URL y no puede.</figcaption>
 </figure>
 <h2>5. Mantenimiento y cierre</h2>
-<p><strong>Criterios de aceptación: </strong>100 % de las E2E aprobadas en corridas seguidas, también sobre el código integrado; ningún caso depende de otro ni del orden; cada caso deja evidencia; el build normal sigue en verde (401 de 401) sin necesitar navegador.</p>
+<p><strong>Criterios de aceptación: </strong>todas las E2E tienen que pasar, incluso sobre el código integrado; ningún caso puede depender de otro ni del orden; cada caso tiene que dejar su captura, y el build normal tiene que seguir funcionando (401 de 401) sin necesitar un navegador.</p>
 <p><strong>Acciones correctivas y responsables: </strong></p>
 <ul>
-<li>Corregir la espera de la búsqueda en PaginaProcesos (Héctor Estrada, hecho).</li>
-<li>DEF-01: el lienzo vacío en solo lectura invita a arrastrar desde la paleta (equipo de frontend, pendiente).</li>
-<li>Agregar el job E2E a GitHub Actions (equipo, pendiente).</li>
-<li>Ampliar la suite a gateways, mensajes entre pools y reordenar lanes (equipo, pendiente).</li>
+<li>Corregir la espera de la búsqueda en PaginaProcesos. Héctor Estrada, hecho.</li>
+<li>DEF-01: en modo solo lectura el lienzo vacío dice que se arrastre desde la paleta, pero ese usuario no tiene paleta. Equipo de frontend, pendiente.</li>
+<li>Agregar el job de pruebas E2E a GitHub Actions. Equipo, pendiente.</li>
+<li>Ampliar la suite a gateways, mensajes entre pools y reordenar lanes. Equipo, pendiente.</li>
 </ul>
-<p><strong>Mantenimiento de scripts: </strong>si cambia una pantalla se actualiza su Page Object, no las pruebas. Los data-testid no se borran sin actualizar la suite. PaginaEditor repite dos constantes del lienzo de Angular (DESPLAZAMIENTO_X = 180 y ANCHO_ACTIVIDAD = 140): si cambian allá, hay que cambiarlas aquí. La versión de Selenium se actualiza en la propiedad selenium.version del pom.xml.</p>
-<p><strong>Conclusiones: </strong>la suite prueba el sistema completo como lo usa una persona, incluido lo más difícil de automatizar (el drag and drop del editor) y lo más crítico (seguridad multiempresa). Es estable (tres corridas seguidas sin fallos), rápida (menos de 2 minutos) y no afecta el build normal.</p>
+<p><strong>Mantenimiento de scripts: </strong>si cambia una pantalla, se ajusta su Page Object y las pruebas quedan igual. Los data-testid no se deben borrar sin actualizar la suite. PaginaEditor copia dos medidas del lienzo de Angular (DESPLAZAMIENTO_X = 180 y ANCHO_ACTIVIDAD = 140); si cambian allá, hay que cambiarlas aquí. La versión de Selenium se cambia en la propiedad selenium.version del pom.xml.</p>
+<p><strong>Conclusiones: </strong>con estas pruebas revisamos la aplicación como la usaría una persona, incluyendo lo más difícil de automatizar, que es el drag and drop del editor, y lo más delicado, que es la separación entre empresas. La suite es estable, corre en menos de dos minutos y no afecta el build normal.</p>
 <h3>Inventario de scripts</h3>
 <table>
 <thead>
@@ -112,14 +136,14 @@
 <tr>
 <td>AUT</td>
 <td>AutenticacionE2ETest (E2E-01 a 04)</td>
-<td>E2E / sistema</td>
+<td>E2E</td>
 <td>e2e/AutenticacionE2ETest.java<br>./mvnw test -Pe2e</td>
 <td>Héctor Estrada</td>
 </tr>
 <tr>
 <td>PRO</td>
 <td>ProcesosE2ETest (E2E-05 a 08)</td>
-<td>E2E / sistema</td>
+<td>E2E</td>
 <td>e2e/ProcesosE2ETest.java<br>./mvnw test -Pe2e</td>
 <td>Héctor Estrada</td>
 </tr>
@@ -146,14 +170,14 @@
 </tr>
 <tr>
 <td>CTRL</td>
-<td>Tests de controladores (MockMvc)</td>
+<td>Pruebas de controladores (MockMvc)</td>
 <td>Integración de API</td>
 <td>controllers/*ControllerTest.java<br>./mvnw test</td>
 <td>Mariana Osorio, Héctor Estrada</td>
 </tr>
 <tr>
 <td>UNIT</td>
-<td>Tests de servicios, DTO y modelo</td>
+<td>Pruebas de servicios, DTO y modelo</td>
 <td>Unitaria backend</td>
 <td>services/, dto/ y model/<br>./mvnw test</td>
 <td>Mariana Osorio, Héctor Estrada</td>
@@ -194,56 +218,63 @@
 </thead>
 <tbody>
 <tr>
-<td>22/11/2026 · corrida 1</td>
+<td>22/11/2026, corrida 1</td>
 <td>E2E (14)</td>
 <td>12</td>
 <td>2</td>
-<td>E2E-05 y 08: espera de la prueba; corregido</td>
+<td>E2E-05 y 08 fallaron por la espera de la prueba. Se corrigió</td>
 </tr>
 <tr>
-<td>22/11/2026 · corrida 2</td>
+<td>22/11/2026, corrida 2</td>
 <td>E2E (14)</td>
 <td>14</td>
 <td>0</td>
-<td>surefire-reports</td>
+<td>Reportes de Surefire</td>
 </tr>
 <tr>
-<td>22/11/2026 · corrida 3</td>
+<td>22/11/2026, corrida 3</td>
 <td>E2E (14)</td>
 <td>14</td>
 <td>0</td>
-<td>surefire-reports; sin intermitencias</td>
+<td>Reportes de Surefire</td>
 </tr>
 <tr>
-<td>22/11/2026 · main integrado</td>
+<td>22/11/2026, main integrado</td>
 <td>E2E (14)</td>
 <td>14</td>
 <td>0</td>
-<td>evidencias/selenium (14 capturas); merge 968613e</td>
+<td>Sobre los cambios de seguridad del equipo</td>
 </tr>
 <tr>
-<td>22/11/2026 · main integrado</td>
+<td>22/11/2026, main integrado</td>
+<td>E2E (14)</td>
+<td>14</td>
+<td>0</td>
+<td>Figuras 1 a 7 y carpeta evidencias/selenium</td>
+</tr>
+<tr>
+<td>22/11/2026, main integrado</td>
 <td>Backend: unitarias e integración</td>
 <td>401</td>
 <td>0</td>
-<td>surefire-reports (101 s)</td>
+<td>Reportes de Surefire</td>
 </tr>
 <tr>
-<td>22/11/2026</td>
-<td>Frontend: unitarias (Karma)</td>
+<td>22/11/2026, main integrado</td>
+<td>Frontend: unitarias</td>
 <td>17</td>
 <td>0</td>
-<td>ng test sobre main integrado, Chrome Headless 157</td>
+<td>Salida de ng test</td>
 </tr>
 <tr>
 <td>22/11/2026</td>
-<td>Carga JMeter E1 a E4</td>
+<td>Carga con JMeter (E1 a E4)</td>
 <td>22.594 peticiones</td>
 <td>0</td>
-<td>Documento 04 y evidencias/jmeter-reportes</td>
+<td>Documento 04</td>
 </tr>
 </tbody>
 </table>
 <h2>Anexos y referencias</h2>
-<p>Repositorio / documentación: github.com/Desarrollo-Web-2630/Proyecto1 (suites en thymeleaf/src/test/java/com/proyecto1/thymeleaf/e2e) y github.com/Desarrollo-Web-2630/Proyecto2 (atributos data-testid del frontend).</p>
-<p>Capturas, diagramas, reportes, logs u otras evidencias: carpeta Entrega_Final_Pruebas/evidencias/selenium (una captura por caso, con el nombre de la suite y del caso) y target/surefire-reports.</p>
+<p>Repositorio / documentación: github.com/Desarrollo-Web-2630/Proyecto1 (las pruebas están en thymeleaf/src/test/java/com/proyecto1/thymeleaf/e2e) y github.com/Desarrollo-Web-2630/Proyecto2 (los data-testid del frontend). Las instrucciones para correrlas están en el README de Proyecto1, sección Pruebas de sistema E2E (Selenium).</p>
+<p>Capturas, diagramas, reportes, logs u otras evidencias: carpeta evidencias/selenium, con una captura por caso nombrada con la suite y el caso, y los reportes de Surefire.</p>
