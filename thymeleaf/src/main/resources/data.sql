@@ -52,6 +52,8 @@ INSERT INTO wiki_entry (id, title, url, parent_id, order_index, active, content_
 INSERT INTO wiki_entry (id, title, url, parent_id, order_index, active, content_path) VALUES (34, 'Roles y Seguridad', '/wiki/documentacion/roles-seguridad', 32, 8, false, 'wiki/roles-seguridad.html');
 INSERT INTO wiki_entry (id, title, url, parent_id, order_index, active, content_path) VALUES (35, 'Pruebas de carga', '/wiki/documentacion/pruebas-carga', 32, 4, false, 'wiki/pruebas-carga.html');
 INSERT INTO wiki_entry (id, title, url, parent_id, order_index, active, content_path) VALUES (36, 'Pruebas automatizadas', '/wiki/documentacion/pruebas-automatizadas', 32, 7, false, 'wiki/pruebas-automatizadas.html');
+INSERT INTO wiki_entry (id, title, url, parent_id, order_index, active, content_path) VALUES (37, 'Resumen ejecutivo', '/wiki/documentacion/resumen-ejecutivo', 32, 1, false, 'wiki/resumen-ejecutivo.html');
+INSERT INTO wiki_entry (id, title, url, parent_id, order_index, active, content_path) VALUES (38, 'Pruebas funcionales', '/wiki/documentacion/pruebas-funcionales', 32, 5, false, 'wiki/pruebas-funcionales.html');
 
 -- ============================================================
 -- Sistema de etiquetas / categorias
@@ -109,3 +111,5 @@ INSERT INTO wiki_entry_category (entry_id, category_id) VALUES (33, 11);  -- Pru
 INSERT INTO wiki_entry_category (entry_id, category_id) VALUES (34, 12), (34, 7);  -- Roles y Seguridad
 INSERT INTO wiki_entry_category (entry_id, category_id) VALUES (35, 11);  -- Pruebas de carga
 INSERT INTO wiki_entry_category (entry_id, category_id) VALUES (36, 11), (36, 12);  -- Pruebas automatizadas
+INSERT INTO wiki_entry_category (entry_id, category_id) VALUES (37, 10), (37, 11), (37, 12);  -- Resumen ejecutivo
+INSERT INTO wiki_entry_category (entry_id, category_id) VALUES (38, 11), (38, 12);  -- Pruebas funcionales

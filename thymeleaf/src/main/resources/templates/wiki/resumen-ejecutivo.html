@@ -1,0 +1,106 @@
+<h2>Ficha del documento</h2>
+<table>
+<thead>
+<tr>
+<th>Dato</th>
+<th>Información</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Nombre del proyecto</td>
+<td>Sistema Web de Diseño y Modelado de Procesos BPMN Multi-empresa</td>
+</tr>
+<tr>
+<td>Equipo / integrantes</td>
+<td>Iván Pardo, Mariana Osorio, Héctor Salazar, Sebastián Velásquez</td>
+</tr>
+<tr>
+<td>Curso / grupo</td>
+<td>Desarrollo Web — Clase 2630 (Pontificia Universidad Javeriana)</td>
+</tr>
+<tr>
+<td>Fecha y versión</td>
+<td>Noviembre de 2026 · Versión 2.0</td>
+</tr>
+<tr>
+<td>Enlace a repositorio y demostración</td>
+<td>Frontend: https://github.com/Desarrollo-Web-2630/Proyecto2 | Backend: https://github.com/Desarrollo-Web-2630/Proyecto1 | Demostración: http://10.43.99.75 (red Javeriana / VPN)</td>
+</tr>
+</tbody>
+</table>
+<h2>1. Descripción general</h2>
+<p><strong>Problema que resuelve la herramienta: </strong>La falta de estandarización, trazabilidad y herramientas colaborativas accesibles para documentar y diseñar flujos de procesos organizacionales bajo notación BPMN, evitando que la definición de responsabilidades (roles, pools y lanes), actividades, compuertas de decisión (gateways) e intercambios de mensajes entre participantes quede dispersa o desactualizada.</p>
+<p><strong>Objetivo principal: </strong>Proveer una plataforma web multi-empresa con aislamiento de datos y control de acceso basado en roles que permita registrar organizaciones, administrar usuarios y roles de proceso, y diseñar interactivamente diagramas BPMN completos (pools, lanes, actividades, gateways, arcos de secuencia y flujos de mensaje con correlación) sobre un lienzo visual 2D con soporte de Drag &amp; Drop.</p>
+<p><strong>Usuarios previstos y necesidades: </strong>Tres perfiles por organización (RolAcceso): (1) Administrador (ADMIN), quien registra la empresa, gestiona cuentas de usuario, administra el catálogo de roles de proceso y posee control total de creación, edición, publicación, inactivación y eliminación de procesos y sus elementos; (2) Editor (EDITOR), analista de procesos que modela diagramas BPMN creando y conectando pools, lanes, actividades, gateways, arcos y mensajes sin permisos destructivos sobre procesos o catálogos; y (3) Lector (LECTURA), usuario de consulta que inspecciona los diagramas, estados y propiedades en modo de solo lectura.</p>
+<p><strong>Alcance funcional logrado y aspectos excluidos: </strong>Se completó el 100 % del alcance funcional previsto (HU-01 a HU-28): registro de empresas y activación de cuenta por token de correo (HU-01 a HU-03), CRUD y ciclo de estados de procesos con búsqueda filtrada y paginación (HU-04 a HU-07), gestión de actividades y posicionamiento 2D (HU-08 a HU-10), arcos de secuencia con validación y advertencias de desconexión (HU-11 a HU-13), gateways exclusivos/paralelos/inclusivos (HU-14 a HU-16), catálogo de roles de proceso con protección de roles en uso (HU-17 a HU-20), pools propietarios/externos y lanes reordenables (HU-21 a HU-22), flujos de mensaje entre pools con clave de correlación y esquema JSON (HU-25 a HU-28), además de un Editor Visual BPMN unificado (/procesos/:id/editor) con zoom, paleta interactiva, inspector lateral y Drag &amp; Drop. En la versión final se incorporaron además la compartición controlada de procesos en modo lectura entre empresas (HU-23), los permisos granulares por pool según rol de acceso (HU-24), la bitácora de auditoría e historial de cambios, el inicio y cierre de sesión con tokens JWT firmados y revocables (HU-03), las pruebas E2E con Selenium WebDriver y el despliegue automatizado en Kubernetes.</p>
+<h2>2. Solución implementada</h2>
+<p><strong>Funciones clave del modelador BPMN: </strong>Editor visual interactivo unificado (EditorProcesoComponent y LienzoProcesoComponent) y componente de diagrama reutilizable (PoolDiagramaComponent) con lienzo 2D por coordenadas (X, Y), controles de zoom (50 % a 175 %), paleta de herramientas (Seleccionar, Actividad, Gateway, Conectar arco, Enviar mensaje), Drag &amp; Drop de actividades y gateways dentro y entre lanes, reordenamiento vertical de lanes por arrastre, trazado dinámico de arcos en capa SVG con curvas Bézier y edición rápida de etiquetas al hacer clic, conectores circulares emergentes, representación en rombo de gateways, líneas punteadas para flujos de mensaje entre pool, panel inspector lateral de propiedades y atajos de teclado (Delete/Backspace, Esc).</p>
+<p><strong>Tecnologías principales de Frontend, Backend y persistencia: </strong>Frontend: SPA en Angular 20.3 (TypeScript 5.9, arquitectura modular con componentes standalone, Signals, ChangeDetectionStrategy.OnPush, Reactive Forms, HttpClient con RxJS 7.8, interceptor funcional que adjunta el token JWT en el encabezado Authorization y cierra la sesión ante respuestas 401, y guards de ruta authGuard, invitadoGuard y rolGuard), CSS nativo con sistema de variables y servidor mock en Node.js. Backend: Java 17 con Spring Boot 3.3, Spring Security 6 (SecurityFilterChain sin estado, filtro JwtFiltro y autorización por rol) con JJWT 0.12 (firma HMAC-SHA256), Spring Data JPA / Hibernate (herencia JOINED en ElementoConectable y borrado lógico con @SQLDelete / @SQLRestriction), Jakarta Bean Validation, BCrypt, JavaMailSender, ModelMapper y documentación OpenAPI 3 / Swagger UI. Persistencia: PostgreSQL 16 en producción (Kubernetes con volumen persistente) y H2 en memoria para ejecución inmediata y pruebas.</p>
+<p><strong>Estado actual de implementación: </strong>Completado e integrado en la rama principal (main) de ambos repositorios. El proyecto compila sin errores ni advertencias en modo estricto de producción (ng build y ng lint con 0 errores), cuenta con contenedorización mediante Docker (Nginx + Spring Boot) y se despliega automáticamente en un clúster MicroK8s on-premise de la universidad mediante GitHub Actions, con imágenes publicadas en GitHub Container Registry (GHCR); se conserva la configuración de Vercel y Render como alternativa de despliegue en la nube.</p>
+<p><strong>Enlace o referencia a arquitectura C4 y despliegue:</strong> Despliegue: el sistema se ejecuta en MicroK8s (namespace procesos) sobre una VM Ubuntu 22.04 de la red Javeriana. Un Ingress único en http://10.43.99.75 envía /api, /swagger-ui y /v3/api-docs al backend (1 réplica de Spring Boot) y el resto al frontend (2 réplicas de Nginx + Angular); PostgreSQL 16 corre en su propio pod con un volumen persistente de 1 GiB. Cada repositorio tiene un workflow (.github/workflows/deploy.yml) que construye la imagen, la publica en GHCR y la aplica en el clúster con un runner self-hosted. La guía completa está en Proyecto1/DESPLIEGUE_K8S.md.</p>
+<h2>3. Resumen consolidado de pruebas</h2>
+<table>
+<thead>
+<tr>
+<th>Tipo de prueba</th>
+<th>Alcance / indicador</th>
+<th>Resultado</th>
+<th>Evidencia</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Carga y rendimiento</td>
+<td>4 escenarios (20 a 200 usuarios concurrentes), 22.594 peticiones HTTP con JMeter sobre login JWT, procesos, actividades y drag and drop en el editor</td>
+<td>100 % respuestas exitosas (22.594 / 22.594, 0 % de error; p95 de 12 ms con 100 usuarios y 320 ms con 200 usuarios)</td>
+<td>Proyecto1/thymeleaf/src/test/jmeter/plan-carga.jmx y reportes en target/jmeter/reports/</td>
+</tr>
+<tr>
+<td>Funcionales - Frontend</td>
+<td>28 Historias de Usuario (HU-01..28), flujos del Editor Visual BPMN (Drag &amp; Drop, SVG, filtros, paginación), compartición, permisos por pool, historial y protección de rutas</td>
+<td>28 / 28 escenarios aprobados (100 %); 14 / 14 casos E2E aprobados en Selenium; 0 errores en ESLint (ng lint) y compilación AOT (ng build)</td>
+<td>Proyecto2/front/src/app/ (módulos y editor), front/mock/server.mjs y registros en .docs/*.txt</td>
+</tr>
+<tr>
+<td>Funcionales - Backend</td>
+<td>56 peticiones funcionales en colección Postman y 138 pruebas MockMvc sobre los 16 controladores REST (/api/v1/* y /api/auth/*) con JWT</td>
+<td>56 / 56 peticiones aprobadas (códigos 200, 201, 204 y validaciones 400/401/404 controladas)</td>
+<td>Proyecto1/thymeleaf/postman_collection.json, postman_environment.json y Swagger UI (/swagger-ui.html)</td>
+</tr>
+<tr>
+<td>Unitarias</td>
+<td>Backend: 45 clases de prueba con 399 métodos @Test (401 ejecuciones con JUnit 5, Mockito, MockMvc y Spring Security Test) y cobertura JaCoCo &gt; 89 %. Frontend: 17 pruebas con Karma y Jasmine sobre guards e interceptor</td>
+<td>Backend: 401 / 401 casos ejecutados aprobados (0 fallos, 0 errores). Frontend: 17 / 17 aprobadas</td>
+<td>Proyecto1/thymeleaf/src/test/java/com/proyecto1/thymeleaf/, reporte target/site/jacoco/index.html y Proyecto2/front/src/app/core/*.spec.ts</td>
+</tr>
+<tr>
+<td>SonarQube</td>
+<td>Quality Gate, cobertura de código (&gt; 85 %), bugs, vulnerabilidades y code smells en Backend y Linter estricto en Frontend</td>
+<td>Quality Gate aprobado (92,4 % de cobertura de líneas, 0 vulnerabilidades, 0 bugs críticos, punto crítico de CSRF revisado y justificado, sin uso de any)</td>
+<td>Proyecto1/thymeleaf/pom.xml (sonar-maven-plugin + jacoco) y Proyecto2/front/eslint.config.js</td>
+</tr>
+<tr>
+<td>Automatizadas</td>
+<td>14 pruebas E2E en navegador con Selenium WebDriver (Page Objects y Drag &amp; Drop HTML5), integración de controladores (MockMvc) y seguridad (SeguridadIntegracionTest con 22 casos)</td>
+<td>14 / 14 casos E2E aprobados en Selenium (./mvnw test -Pe2e), 401 / 401 en Maven (./mvnw test), validación Angular y despliegue continuo en MicroK8s con GitHub Actions</td>
+<td>Proyecto1/thymeleaf/src/test/java/.../e2e/*E2ETest.java, controllers/*Test.java y security/*Test.java; .github/workflows/deploy.yml en los 3 repositorios</td>
+</tr>
+<tr>
+<td>Seguridad y permisos</td>
+<td>Autenticación con JWT firmado (HMAC-SHA256, vigencia de 60 min), aislamiento multi-empresa tomado del token, control por RolAcceso (ADMIN, EDITOR, LECTURA) en Spring Security y en los guards de Angular, hash BCrypt, tokens de activación y encabezados de seguridad en Nginx</td>
+<td>100 % de restricciones cumplidas: 401 sin token o con token inválido, bloqueo de escritura en LECTURA, eliminación exclusiva para ADMIN, validación cruzada por empresa y encabezado X-Empresa-Id falso ignorado (22 / 22 pruebas de seguridad aprobadas)</td>
+<td>SecurityConfig.java, JwtServicio.java, EmpresaActual.java, SeguridadIntegracionTest.java, JwtServicioTest.java, api.interceptor.ts y auth.guard.ts / rol.guard.ts / invitado.guard.ts en Angular</td>
+</tr>
+</tbody>
+</table>
+<h2>4. Hallazgos principales</h2>
+<p><strong>Fortalezas comprobadas por las pruebas: </strong>Aislamiento multi-empresa consistente en todas las consultas del backend mediante EmpresaActual, que ahora toma la empresa del token JWT ya validado e ignora cualquier encabezado enviado por el cliente; autorización por rol comprobada con 22 pruebas de integración de seguridad (respuestas 401 y 403 en el mismo formato JSON del resto de la API); experiencia fluida de modelado en el Editor Visual BPMN (/procesos/:id/editor) que integra en una sola pantalla pools, lanes, actividades, gateways, arcos SVG y mensajes con correlación; integridad referencial con borrado lógico (@SQLDelete) y advertencias preventivas al eliminar actividades con arcos o roles en uso; y tipado estricto en Angular 20 sin uso de any.</p>
+<p><strong>Defectos y riesgos relevantes encontrados: </strong>Durante la integración entre el frontend y el backend se detectaron cuatro incidencias: (1) ausencia inicial del endpoint paginado GET /actividades/buscar en una versión previa del controlador; (2) validación redundante de empresaId en ActividadListComponent frente a ProcesoResponseDTO; (3) rechazo del evento drop de arcos en navegadores sobre Linux cuando dataTransfer.effectAllowed se fijaba en link en lugar de move; y (4) superposición visual inicial de actividades y gateways antes de incorporar el cálculo automático de coordenadas libres y el ajuste de posiciones. Al incorporar la seguridad se identificaron además dos riesgos: (5) un administrador podía cambiar su propio rol, desactivarse o eliminarse y perder el acceso a la empresa; y (6) SonarQube marcó como punto crítico la desactivación de CSRF en la configuración de Spring Security.</p>
+<p><strong>Correcciones realizadas y pendientes: </strong>Se corrigieron en su totalidad los defectos encontrados: se incorporó el endpoint paginado /actividades/buscar en ActividadController y sus pruebas unitarias (commit 1af3be8); se unificó la migración de servicios a HttpClient con RxJS y el interceptor funcional apiInterceptor (PR #10 y #11); se reparó el Drag &amp; Drop de arcos con vista previa en vivo, conectores circulares en hover y lienzo en blanco (PR #12); y se implementó el Editor Visual BPMN completo con soporte de gateways, mensajes y correcciones estéticas de posicionamiento. Además, se sustituyó el encabezado demostrativo X-Empresa-Id por autenticación con tokens JWT firmados, Spring Security y guards en Angular (PR #25 a #27 del backend y PR #14 y #15 del frontend); se bloqueó que un administrador modifique, desactive o elimine su propia cuenta; y se documentó la revisión del punto crítico de CSRF, justificada porque la API no guarda sesión y solo acepta el token en el encabezado Authorization. No quedan defectos abiertos conocidos.</p>
+<p><strong>Limitaciones del alcance de las pruebas: </strong>Las pruebas de carga con JMeter se ejecutaron en entorno local/contenedorizado con base de datos en memoria H2 y PostgreSQL local, por lo que las latencias en el clúster MicroK8s (recursos limitados de la VM y una sola réplica del backend) o en el entorno cloud gratuito alternativo (Render, con arranque en frío) pueden variar. Las pruebas unitarias del frontend cubren los guards y el interceptor (17 casos), mientras que los flujos principales de interfaz se validaron de extremo a extremo con Selenium WebDriver (14 casos E2E).</p>
+<h2>5. Conclusión y estado de entrega</h2>
+<p><strong>Nivel de cumplimiento de objetivos del proyecto: </strong>100 % de las historias de usuario comprometidas para el backend y el frontend (HU-01 a HU-28), superando el alcance base mediante la incorporación de un editor gráfico interactivo unificado con soporte completo de arrastrar y soltar (Drag &amp; Drop) para actividades, lanes, gateways, arcos y mensajes, junto con seguridad basada en JWT y despliegue continuo en Kubernetes.</p>
+<p><strong>Valoración global de calidad, seguridad y desempeño: </strong>Alta. El backend cuenta con 401 pruebas unitarias, de controladores y de integración de seguridad (más 14 pruebas E2E con Selenium WebDriver) con cobertura superior al 89 % validada con JaCoCo y SonarQube (rating A en las cuatro dimensiones), autenticación sin estado con JWT firmados y autorización por rol en Spring Security, manejo centralizado de excepciones (GlobalExceptionHandler y ManejadorErroresSeguridad) sin filtración de trazas internas y contraseñas cifradas con BCrypt; el frontend cumple el 100 % de las reglas de linting y accesibilidad en Angular 20 con detección de cambios OnPush, protege sus rutas con guards por sesión y rol, y Nginx agrega encabezados de seguridad (X-Content-Type-Options, X-Frame-Options y Referrer-Policy).</p>
+<p><strong>Criterios que respaldan la aptitud para demostración o entrega: </strong>Compilación limpia y verificada en ambos repositorios, flujo completo de extremo a extremo (desde el registro de la empresa, la activación de cuenta y el inicio de sesión con JWT hasta el diseño, conexión de arcos/gateways/mensajes y publicación del proceso BPMN), disponibilidad de entorno simulado inmediato (npm run mock), compatibilidad con Docker Compose y despliegue automatizado y verificado en MicroK8s (rollout status), accesible en http://10.43.99.75.</p>
+<p><strong>Próximos pasos o mejoras prioritarias: </strong>(1) Añadir exportación del diagrama BPMN a formato estándar XML BPMN 2.0 / SVG descargable; (2) ampliar la suite Selenium E2E a las vistas de compartición, permisos por pool e historial y sumar pruebas unitarias de componentes en Angular; y (3) configurar HTTPS con certificado TLS en el Ingress y ejecutar las suites de prueba dentro del workflow de GitHub Actions.</p>

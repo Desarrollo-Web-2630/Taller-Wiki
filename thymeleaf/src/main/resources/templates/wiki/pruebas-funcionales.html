@@ -1,0 +1,312 @@
+<h2>Ficha del documento</h2>
+<table>
+<thead>
+<tr>
+<th>Dato</th>
+<th>Información</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Institución / asignatura</td>
+<td>Pontificia Universidad Javeriana · Desarrollo Web — Clase 2630</td>
+</tr>
+<tr>
+<td>Nombre del proyecto</td>
+<td>Sistema Web de Diseño y Modelado de Procesos BPMN Multi-empresa</td>
+</tr>
+<tr>
+<td>Equipo / integrantes</td>
+<td>Iván Pardo, Mariana Osorio, Héctor Salazar, Sebastián Velásquez</td>
+</tr>
+<tr>
+<td>Docente</td>
+<td>Pablo Márquez</td>
+</tr>
+<tr>
+<td>Versión / fecha</td>
+<td>Versión 2.0 · 22 de noviembre de 2026</td>
+</tr>
+<tr>
+<td>Enlace al repositorio</td>
+<td>Frontend: https://github.com/Desarrollo-Web-2630/Proyecto2 | Backend: https://github.com/Desarrollo-Web-2630/Proyecto1 | Wiki: https://github.com/Desarrollo-Web-2630/Taller-Wiki | Demostración: http://10.43.99.75 (red Javeriana / VPN)</td>
+</tr>
+</tbody>
+</table>
+<h2>1. Estrategia y alcance</h2>
+<p><strong>Funcionalidades BPMN cubiertas: </strong>Se cubrió el 100 % de las historias de usuario del sistema (HU-01 a HU-28): registro de empresas con creación automática del administrador inicial (HU-01), gestión de usuarios y roles de acceso ADMIN, EDITOR y LECTURA (HU-02), activación de cuenta por token de correo e inicio/cierre de sesión con JWT revocable (HU-03), CRUD y ciclo de estados de procesos BORRADOR, PUBLICADO e INACTIVO con búsqueda filtrada y paginada (HU-04 a HU-07), creación, edición, movimiento 2D y eliminación de actividades con advertencia de arcos en cascada (HU-08 a HU-10), conexión y edición de arcos de secuencia (HU-11 a HU-13), compuertas de decisión o gateways EXCLUSIVO, PARALELO e INCLUSIVO con validación de salidas al publicar (HU-14 a HU-16), catálogo de roles de proceso con bloqueo de eliminación si están asignados a lanes (HU-17 a HU-20), gestión de pools propietarios o externos y reordenamiento de lanes por Drag &amp; Drop (HU-21 y HU-22), compartición de procesos en modo lectura con otras empresas (HU-23), permisos granulares por pool según rol (HU-24), flujos de mensaje THROW/CATCH entre pools con clave de correlación, payload JSON, destino externo y política de fallo (HU-25 a HU-28), e historial de auditoría de cambios.</p>
+<p><strong>Ambiente y datos de prueba: </strong>Las pruebas funcionales se ejecutaron en tres entornos complementarios: (1) entorno local integrado con Backend Spring Boot 3.3.2 sobre Java 17 (puerto 8080, perfil H2 en memoria y PostgreSQL 16) y Frontend Angular 20.3 (puerto 4200 con proxy /api); (2) entorno automatizado E2E con Selenium WebDriver 4.53.0 y Chrome Headless, donde la clase E2EBase levanta el backend limpio y siembra automáticamente dos empresas (Empresa Demo con NIT 900123456-7 y Segunda Empresa con NIT 900999888-1), tres usuarios por rol (admin@demo.com, editor@demo.com, lector@demo.com), roles de proceso (Solicitante, Aprobador) y procesos semilla (&quot;Solicitud de vacaciones&quot;, &quot;Proceso privado otra empresa&quot;); y (3) entorno de preproducción desplegado en MicroK8s (http://10.43.99.75, namespace procesos) dentro de la red de la universidad.</p>
+<p><strong>Criterios de entrada y salida: </strong>Criterios de entrada: compilación exitosa de ambos repositorios sin errores de tipos ni de linter (./mvnw test-compile en Proyecto1; npm run lint y npm run build con código 0 en Proyecto2), migración e inicialización de datos semilla activas (DataInitializer) y variables de entorno JWT_SECRET y CORS configuradas. Criterios de salida: 100 % de las historias de usuario verificadas sin defectos críticos ni altos abiertos, 14 / 14 casos funcionales E2E aprobados en Selenium, 138 / 138 pruebas funcionales y de integración de API aprobadas con MockMvc (116 de controladores + 22 de seguridad), 56 / 56 peticiones aprobadas en la colección Postman y 17 / 17 pruebas de guards e interceptor aprobadas en el frontend.</p>
+<h2>2. Frontend</h2>
+<p><strong>Navegación e interfaz: </strong>La aplicación SPA en Angular 20.3 implementa enrutamiento modular con carga diferida (loadComponent / loadChildren) protegido por tres guardas funcionales: invitadoGuard (redirige a /procesos si ya existe sesión activa al visitar /, /login o /registro), authGuard (protege todas las vistas bajo LayoutComponent y redirige a /login cuando no hay token vigente) y rolGuard (restringe /usuarios y /roles a ADMIN, y los formularios de creación/edición a ADMIN y EDITOR). La barra superior (LayoutComponent) muestra el nombre del usuario autenticado, su etiqueta de rol, enlaces contextuales a Procesos, Roles, Usuarios e Historial, y el botón de cierre de sesión; además, la aplicación cierra la sesión automáticamente tras 15 minutos de inactividad.</p>
+<p><strong>Creación y edición de diagramas BPMN: </strong>Se validaron tanto las vistas tabulares por recurso como el Editor Visual BPMN unificado (/procesos/:id/editor, componentes EditorProcesoComponent, LienzoProcesoComponent y PoolDiagramaComponent). El usuario modela arrastrando elementos desde la paleta hacia el lienzo 2D (Pool propietario o externo, Lanes, Actividades y Gateways), mueve actividades y gateways dentro o entre lanes mediante Drag &amp; Drop (actualizando posicionX, posicionY y laneId en tiempo real), reordena lanes verticalmente, traza arcos de secuencia en la capa SVG desde el conector circular emergente con vista previa en vivo, edita condiciones haciendo clic sobre la etiqueta del arco, crea flujos de mensaje en línea punteada entre pools distintos con resaltado por correlationKey, ajusta el zoom (50 % a 175 %) y edita propiedades desde el inspector lateral o elimina con las teclas Delete/Backspace.</p>
+<p><strong>Validaciones, mensajes y manejo de errores: </strong>Todos los formularios reactivos (FormBuilder nonNullable) validan campos obligatorios y rechazan cadenas compuestas solo por espacios (Validators.pattern(/\S/)), aplicando .trim() antes de enviar. El botón de guardado permanece deshabilitado o muestra los mensajes de validación por campo cuando el formulario es inválido. Los errores HTTP devueltos por el backend (400, 401, 403, 404, 409) se transforman mediante la utilidad centralizada mensajeDeError(err, porDefecto) de core/api-error.ts en alertas visibles (.error) sin exponer trazas técnicas. Antes de eliminar una actividad o un gateway, la interfaz consulta los arcos conectados y presenta una confirmación explícita indicando cuántos arcos se eliminarán en cascada.</p>
+<p><strong>Pruebas de compatibilidad y accesibilidad (si aplica): </strong>Se verificó el cumplimiento al 100 % de las reglas de accesibilidad de plantillas (@angular-eslint/templateAccessibility: controles &lt;input&gt;, &lt;select&gt; y &lt;textarea&gt; asociados a su &lt;label&gt; o con aria-label, botones con texto o título descriptivo y contraste adecuado en la paleta CSS nativa). La compatibilidad funcional y el despacho de eventos HTML5 Drag &amp; Drop (dragstart, dragover, drop con effectAllowed=&quot;move&quot;) se comprobaron en Google Chrome / Chromium (v156–157 en Linux y Windows 10) tanto en ejecución interactiva como en modo Headless bajo Selenium WebDriver y Karma.</p>
+<h2>3. Backend</h2>
+<p><strong>Endpoints o servicios evaluados: </strong>Se evaluaron los 16 controladores REST del backend bajo /api/auth/* y /api/v1/*: AuthController (/login, /logout, /yo), VerificacionCorreoController (/activar-cuenta, /reenviar-verificacion, /verificar), EmpresaController (/empresas, /empresas/otras), UsuarioController (/usuarios, cambio de rol, desactivación y borrado), ProcesoController (/procesos, /buscar, /acceso, /publicar, /inactivar, /reactivar), PoolController (/pools), LaneController (/lanes, /reordenar), ActividadController (/actividades, /buscar, /mover), GatewayController (/gateways, /advertencia-eliminar), ArcoController (/arcos), ElementoConectableController (/elementos/{id}/posicion), MensajeController (/mensajes), RolProcesoController (/roles-proceso, /buscar), ComparticionController (/comparticion), PermisoPoolController (/permisos) e HistorialController (/historial).</p>
+<p><strong>Reglas de negocio y validaciones: </strong>Se comprobaron todas las invariantes del dominio BPMN: (1) unicidad de NIT y correo de empresa, y unicidad del nombre de proceso activo dentro de cada empresa; (2) prohibición de que un administrador cambie su propio rol, desactive o elimine su propia cuenta; (3) restricción de un único pool PROPIETARIO por proceso y prohibición de crear lanes o actividades en pools externos (CLIENTE, PROVEEDOR, SISTEMA_EXTERNO) o de eliminar pools con lanes y lanes con actividades; (4) prohibición de eliminar un RolProceso mientras esté asignado a alguna lane, informando los procesos en uso; (5) validación de arcos (prohibición de auto-bucles origen == destino y de arcos duplicados, limpieza automática de condiciones al cambiar un gateway a PARALELO y exigencia de mínimo 2 salidas con condición en gateways antes de publicar un proceso); y (6) validación de mensajes (obligatoriedad de dos pools distintos, prohibición de destinoExterno en mensajes CATCH, exigencia de politicaFallo cuando un THROW va a destino externo y límite de 4000 caracteres en payload).</p>
+<p><strong>Persistencia y recuperación de modelos BPMN: </strong>El modelo de dominio utiliza JPA/Hibernate con herencia JOINED en ElementoConectable (superclase común de Actividad y Gateway que permite que Arco y Mensaje referencien polimórficamente cualquier nodo del diagrama) y borrado lógico mediante @SQLDelete y @SQLRestriction(&quot;eliminado = false&quot;) en Proceso, Pool, Lane, ElementoConectable, Actividad, Gateway, Arco, Mensaje, RolProceso y Usuario. Las pruebas funcionales confirmaron que al crear o mover elementos y recargar el editor (E2E-09 y E2E-10), el grafo completo se recupera íntegro con sus coordenadas (posicionX, posicionY), lanes, condiciones de arcos, claves de correlación y registros de auditoría en HistorialCambio.</p>
+<p><strong>Autenticación / autorización y errores: </strong>La seguridad opera sin estado (SessionCreationPolicy.STATELESS) mediante Spring Security y tokens JWT firmados con HMAC-SHA256 (JJWT 0.12.6, vigencia de 60 minutos, reclamaciones usuarioId, empresaId, rol y jti). EmpresaActual extrae el usuario y la empresa exclusivamente del SecurityContext validado por JwtFiltro, ignorando cualquier encabezado X-Empresa-Id enviado por el cliente. El cierre de sesión (/api/auth/logout) registra el jti en la tabla TokenRevocado para invalidar el token de inmediato, y los usuarios inactivados pierden el acceso en la siguiente petición. ManejadorErroresSeguridad y GlobalExceptionHandler unifican todas las respuestas de error (400, 401, 403, 404, 409) en formato JSON {timestamp, status, mensaje} sin filtrar trazas internas.</p>
+<h2>4. Ejecución y defectos</h2>
+<p><strong>Procedimiento de ejecución: </strong>La verificación funcional se ejecuta en cuatro niveles: (1) Pruebas de integración y funcionales de API en backend con ./mvnw test en Proyecto1/thymeleaf (ejecuta 401 casos entre MockMvc, SeguridadIntegracionTest y servicios sobre H2 en memoria); (2) Pruebas unitarias de seguridad y enrutamiento en frontend con npx ng test --watch=false --browsers=ChromeHeadless, npm run lint y npm run build en Proyecto2/front; (3) Suite funcional E2E con Selenium WebDriver levantando el frontend (npx ng serve) y ejecutando ./mvnw test -Pe2e en Proyecto1/thymeleaf (14 escenarios en navegador real que guardan capturas automáticas en evidencias/selenium/); y (4) Pruebas funcionales de contrato API con la colección Proyecto1/thymeleaf/postman_collection.json (56 peticiones) y en la wiki de documentación con ./mvnw test en Taller-Wiki/thymeleaf (23 casos).</p>
+<p><strong>Resultado esperado frente al obtenido: </strong>Se esperaba que todos los flujos de usuario (autenticación, gestión empresarial, modelado gráfico con Drag &amp; Drop, validaciones de reglas BPMN, compartición entre empresas, permisos por pool e historial) respondieran con los códigos HTTP y cambios de estado definidos en las criterios de aceptación de las 28 historias de usuario. Tras corregir las incidencias detectadas durante la integración inicial, el resultado obtenido coincidió al 100 % con el esperado en todas las suites: 14 / 14 casos E2E aprobados, 401 / 401 pruebas de backend aprobadas, 56 / 56 peticiones Postman exitosas, 17 / 17 pruebas de frontend aprobadas y 23 / 23 pruebas de Taller-Wiki aprobadas.</p>
+<p><strong>Defectos y criticidad: </strong>Durante el ciclo de pruebas funcionales y de integración se registraron 7 defectos: 2 de severidad Alta (DEF-01: ausencia inicial del endpoint paginado GET /actividades/buscar que provocaba HTTP 400; DEF-05: posibilidad de que un ADMIN modificara su propio rol o desactivara/eliminara su propia cuenta), 4 de severidad Media (DEF-02: validación obsoleta de empresaId en ActividadListComponent que ocultaba el botón de nueva actividad; DEF-03: evento drop de arcos ignorado en Chromium/Linux por usar effectAllowed=&quot;link&quot;; DEF-04: superposición inicial de nodos antes del cálculo de coordenadas libres; DEF-06: condición de carrera en la espera de la tabla de procesos en E2E-05 y E2E-08) y 1 de severidad Baja (DEF-07: texto orientativo en lienzo vacío cuando un usuario LECTURA no tiene paleta). Los defectos DEF-01 a DEF-06 fueron corregidos y verificados; DEF-07 quedó documentado como mejora cosmética menor.</p>
+<p><strong>Evidencias: capturas, respuestas API, logs: </strong>Cada ejecución de la suite Selenium E2E genera automáticamente capturas PNG por caso en la carpeta evidencias/selenium/ (además de las figuras publicadas en Taller-Wiki/thymeleaf/src/main/resources/static/images/documentacion/pruebas-automatizadas/fig1.png a fig7.png) y reportes XML/TXT en target/surefire-reports/. Las evidencias de cobertura y análisis estático se generan en target/site/jacoco/index.html (92,4 % de cobertura de líneas) y en SonarQube Cloud (Quality Gate aprobado). Las respuestas de la API están documentadas en postman_collection.json y en Swagger UI (/swagger-ui.html).</p>
+<h2>5. Conclusiones</h2>
+<p><strong>Cobertura funcional: </strong>Se alcanzó una cobertura funcional del 100 % sobre las historias de usuario del proyecto (HU-01 a HU-28), abarcando tanto la interfaz gráfica en Angular 20 (vistas de gestión, editor visual interactivo con Drag &amp; Drop, compartición, permisos por pool e historial) como la totalidad de los endpoints REST, reglas de dominio BPMN y controles de seguridad JWT multi-empresa en Spring Boot.</p>
+<p><strong>Casos aprobados y fallidos: </strong>En la ejecución consolidada sobre la rama main integrada se aprobaron la totalidad de las pruebas funcionales y automatizadas con 0 fallos: 14 / 14 casos E2E en Selenium WebDriver (100 %), 138 / 138 pruebas funcionales de controladores y seguridad con MockMvc (100 %), 56 / 56 peticiones de la colección Postman (100 %), 263 / 263 pruebas unitarias de servicios, modelos y utilidades en el backend (totalizando 401 ejecuciones en ./mvnw test), 17 / 17 pruebas en el frontend Angular y 23 / 23 pruebas funcionales en Taller-Wiki.</p>
+<p><strong>Pendientes y acciones correctivas: </strong>Como acciones de mejora continua quedan: (1) ajustar el mensaje informativo del lienzo vacío en modo solo lectura para no mencionar la paleta de herramientas (DEF-07); (2) incorporar un job en el workflow de GitHub Actions (.github/workflows/deploy.yml) que ejecute ./mvnw test y la suite Selenium E2E (-Pe2e) antes de publicar las imágenes en GHCR; y (3) ampliar la suite Selenium E2E con casos adicionales para las pantallas de compartición entre empresas (HU-23), permisos de pool (HU-24) e historial de auditoría, que actualmente ya están cubiertas por NovedadesControllerTest y por las pruebas de servicios en el backend.</p>
+<h3>Casos funcionales frontend</h3>
+<table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Historia / pantalla</th>
+<th>Pasos</th>
+<th>Esperado</th>
+<th>Obtenido / estado</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>CF-FE-01 (E2E-01 / E2E-02)</td>
+<td>HU-03 · Inicio de sesión (/login)</td>
+<td>1. Abrir /login. 2. Ingresar correo admin@demo.com y clave incorrecta; pulsar Entrar. 3. Ingresar la clave válida y pulsar Entrar.</td>
+<td>Con clave errónea muestra alerta de error y permanece en /login. Con clave válida guarda el JWT en sessionStorage, muestra &quot;Admin Demo (ADMIN)&quot; y redirige a /procesos.</td>
+<td>Obtenido conforme a lo esperado. Aprobado (AutenticacionE2ETest).</td>
+</tr>
+<tr>
+<td>CF-FE-02 (E2E-03 / E2E-04)</td>
+<td>HU-03 · Protección de rutas y cierre de sesión (authGuard / Layout)</td>
+<td>1. Sin sesión, navegar a /procesos. 2. Iniciar sesión como ADMIN, pulsar &quot;Cerrar sesión&quot; y volver a navegar a /procesos.</td>
+<td>En ambos intentos authGuard bloquea el acceso, limpia/verifica la sesión, revoca el token en el backend y redirige automáticamente a /login.</td>
+<td>Obtenido conforme a lo esperado. Aprobado (AutenticacionE2ETest y auth.guard.spec.ts).</td>
+</tr>
+<tr>
+<td>CF-FE-03</td>
+<td>HU-01 y HU-02 · Registro de empresa (/registro) y gestión de usuarios (/usuarios)</td>
+<td>1. En /registro completar nombre, NIT y correo de contacto y guardar. 2. Como ADMIN ir a /usuarios, crear un usuario EDITOR, cambiar su rol e intentar desactivar la propia cuenta ADMIN.</td>
+<td>La empresa se registra creando su ADMIN inicial. En /usuarios se lista y actualiza el nuevo usuario, y se impide que el ADMIN se desactive o cambie su propio rol.</td>
+<td>Obtenido conforme a lo esperado. Aprobado.</td>
+</tr>
+<tr>
+<td>CF-FE-04 (E2E-05 / E2E-06 / E2E-07)</td>
+<td>HU-04 · Creación y validación de procesos (/procesos/nuevo)</td>
+<td>1. Abrir /procesos/nuevo y pulsar Guardar con campos vacíos. 2. Ingresar nombre ya existente (&quot;Solicitud de vacaciones&quot;) y guardar. 3. Ingresar nombre único &quot;Compra de insumos&quot;, descripción y categoría &quot;Compras&quot;, y guardar.</td>
+<td>Vacío: muestra las 3 validaciones obligatorias y no envía. Duplicado: muestra alerta &quot;Ya existe un proceso llamado...&quot;. Válido: crea el proceso en estado BORRADOR y vuelve a /procesos.</td>
+<td>Obtenido conforme a lo esperado. Aprobado (ProcesosE2ETest).</td>
+</tr>
+<tr>
+<td>CF-FE-05 (E2E-08)</td>
+<td>HU-05 a HU-07 · Búsqueda, filtros y cambio de estado en listado (/procesos)</td>
+<td>1. En /procesos escribir &quot;vacaciones&quot; en el buscador y filtrar por estado/categoría. 2. Publicar un proceso válido, luego inactivarlo y reactivarlo como ADMIN.</td>
+<td>La tabla paginada muestra solo procesos coincidentes. Los botones cambian el estado a PUBLICADO, INACTIVO y nuevamente ACTIVO refrescando la vista.</td>
+<td>Obtenido conforme a lo esperado. Aprobado (ProcesosE2ETest).</td>
+</tr>
+<tr>
+<td>CF-FE-06 (E2E-09)</td>
+<td>HU-08, HU-11, HU-21, HU-22 · Modelado completo con Drag &amp; Drop (/procesos/:id/editor)</td>
+<td>1. Abrir el editor de un proceso vacío. 2. Crear pool &quot;Empresa Demo&quot; y lane &quot;Solicitante&quot;. 3. Arrastrar desde la paleta dos actividades (&quot;Registrar solicitud&quot; y &quot;Revisar solicitud&quot;). 4. Unirlas arrastrando el conector de arco y recargar la página.</td>
+<td>El lienzo dibuja el pool, la lane, las dos tarjetas en sus coordenadas y la curva SVG del arco. Al recargar el navegador, el diagrama completo se reconstruye desde el backend.</td>
+<td>Obtenido conforme a lo esperado. Aprobado (EditorProcesoE2ETest).</td>
+</tr>
+<tr>
+<td>CF-FE-07 (E2E-10)</td>
+<td>HU-09 y HU-10 · Movimiento 2D de actividad y eliminación con advertencia en cascada</td>
+<td>1. En el editor arrastrar la actividad &quot;Aprobar&quot; 200 px a la derecha y recargar. 2. Seleccionar una actividad conectada a un arco y pulsar Eliminar (o tecla Delete).</td>
+<td>El arrastre invoca POST /actividades/{id}/mover y conserva posicionX + 200 tras recargar. Al eliminar, el diálogo advierte cuántos arcos conectados se borrarán en cascada.</td>
+<td>Obtenido conforme a lo esperado. Aprobado (EditorProcesoE2ETest).</td>
+</tr>
+<tr>
+<td>CF-FE-08</td>
+<td>HU-12 a HU-16 · Gateways y edición rápida de condiciones de arcos en el lienzo</td>
+<td>1. Arrastrar un gateway EXCLUSIVO al lienzo y conectarle 2 arcos salientes. 2. Hacer clic sobre cada arco en el SVG para asignar condición. 3. Cambiar el gateway a PARALELO desde el inspector.</td>
+<td>El gateway se dibuja como rombo (×). Las etiquetas se actualizan en el SVG. Al cambiar a PARALELO (+), el sistema limpia automáticamente las condiciones de sus arcos salientes.</td>
+<td>Obtenido conforme a lo esperado. Aprobado.</td>
+</tr>
+<tr>
+<td>CF-FE-09</td>
+<td>HU-17 a HU-20 · Catálogo de roles de proceso y protección de rol en uso (/roles)</td>
+<td>1. Como ADMIN crear un rol &quot;Auditor&quot;, editar su descripción y asignarlo a una lane del pool propietario. 2. Intentar eliminar el rol &quot;Auditor&quot; en /roles.</td>
+<td>El catálogo muestra el rol como &quot;En uso&quot; indicando el proceso donde participa, deshabilita o rechaza su eliminación y conserva la asignación en la lane.</td>
+<td>Obtenido conforme a lo esperado. Aprobado.</td>
+</tr>
+<tr>
+<td>CF-FE-10</td>
+<td>HU-25 a HU-28 · Flujos de mensaje entre pools con correlación y payload (/mensajes y editor)</td>
+<td>1. Crear un pool externo CLIENTE. 2. Enviar un mensaje THROW con correlationKey &quot;ORD-01&quot;, payload JSON, destino externo y política REINTENTAR. 3. Seleccionar el mensaje en la vista.</td>
+<td>Se traza la línea punteada entre el pool propietario y el externo y se resaltan los mensajes que comparten la clave de correlación &quot;ORD-01&quot;.</td>
+<td>Obtenido conforme a lo esperado. Aprobado.</td>
+</tr>
+<tr>
+<td>CF-FE-11 (E2E-11 / E2E-12)</td>
+<td>HU-02 y HU-24 · Restricciones del rol LECTURA y permisos por pool (/permisos)</td>
+<td>1. Iniciar sesión como lector@demo.com (LECTURA) y abrir el editor. 2. Intentar navegar por URL a /procesos/nuevo. 3. Como ADMIN configurar permisos del pool en /procesos/:id/pools/:poolId/permisos.</td>
+<td>El usuario LECTURA ve la etiqueta &quot;Solo lectura&quot;, no tiene paleta de herramientas y rolGuard lo devuelve a /procesos si intenta entrar a /nuevo. Los permisos del pool aplican por rol.</td>
+<td>Obtenido conforme a lo esperado. Aprobado (ControlAccesoE2ETest).</td>
+</tr>
+<tr>
+<td>CF-FE-12 (E2E-13 / E2E-14)</td>
+<td>HU-23 · Aislamiento multi-empresa, compartición en lectura (/comparticion) e historial (/historial)</td>
+<td>1. Entrar como ADMIN de Segunda Empresa e intentar abrir por URL un proceso no compartido de Empresa Demo. 2. Como ADMIN de Empresa Demo compartirlo en /procesos/:id/comparticion y revisar /historial.</td>
+<td>Sin compartir, el editor bloquea la carga con error de acceso. Una vez compartido, la empresa invitada lo visualiza en modo solo lectura y /historial registra cada cambio con autor y fecha.</td>
+<td>Obtenido conforme a lo esperado. Aprobado (ControlAccesoE2ETest).</td>
+</tr>
+</tbody>
+</table>
+<p>Tabla 1. Casos funcionales verificados sobre el Frontend Angular 20 (ejecutados mediante Selenium WebDriver E2E, Karma/Jasmine e inspección funcional).</p>
+<h3>Casos funcionales backend</h3>
+<table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Endpoint / regla</th>
+<th>Entrada</th>
+<th>Esperado</th>
+<th>Obtenido / estado</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>CF-BE-01</td>
+<td>POST /api/v1/empresas y POST /api/auth/activar-cuenta (HU-01, HU-03)</td>
+<td>JSON con nombre, NIT único y correoContacto; luego token de verificación y contraseña nueva (&gt;= 8 caracteres).</td>
+<td>HTTP 201 al crear empresa, usuario ADMIN inactivo y token; HTTP 200 al activar la cuenta y cifrar la contraseña con BCrypt. Si el NIT se repite, responde HTTP 400/409.</td>
+<td>HTTP 201 y 200; rechazo de NIT duplicado verificado. Aprobado (EmpresaControllerTest y VerificacionCorreoControllerTest).</td>
+</tr>
+<tr>
+<td>CF-BE-02</td>
+<td>POST /api/auth/login, GET /api/auth/yo y POST /api/auth/logout (HU-03)</td>
+<td>Credenciales válidas/inválidas en /login; token Bearer en /yo; revocación en /logout y reintento de uso del mismo token.</td>
+<td>HTTP 200 con {token, tipo: &quot;Bearer&quot;, expiraEn: 3600, usuario} en login válido; HTTP 401 con clave errónea o cuenta inactiva; tras /logout el jti queda en TokenRevocado y responde HTTP 401.</td>
+<td>HTTP 200 y 401 según cada caso. Aprobado (SeguridadIntegracionTest y JwtServicioTest).</td>
+</tr>
+<tr>
+<td>CF-BE-03</td>
+<td>Aislamiento multi-empresa y protección contra X-Empresa-Id falso (SecurityConfig / EmpresaActual)</td>
+<td>Petición GET y DELETE a /api/v1/procesos/{idAjeno} con JWT de Empresa 2 y encabezado manipulado X-Empresa-Id: 1.</td>
+<td>El backend toma empresaId exclusivamente del JWT firmado, ignora el encabezado X-Empresa-Id y rechaza el acceso o borrado del proceso ajeno (HTTP 404/403).</td>
+<td>100 % aislado entre empresas. Aprobado (SeguridadIntegracionTest).</td>
+</tr>
+<tr>
+<td>CF-BE-04</td>
+<td>Autorización por RolAcceso y autoprotección de ADMIN (/api/v1/usuarios/{id}/*)</td>
+<td>1. Usuario LECTURA envía POST /api/v1/procesos. 2. Usuario EDITOR envía DELETE /api/v1/procesos/{id}. 3. ADMIN intenta cambiar su propio rol o eliminarse.</td>
+<td>HTTP 403 Forbidden para LECTURA en escritura y para EDITOR en borrado; HTTP 400 Bad Request cuando el ADMIN intenta modificar, desactivar o eliminar su propia cuenta.</td>
+<td>HTTP 403 y 400 controlados con JSON estándar. Aprobado (SeguridadIntegracionTest y UsuarioControllerTest).</td>
+</tr>
+<tr>
+<td>CF-BE-05</td>
+<td>CRUD, búsqueda paginada y ciclo de estados de procesos (/api/v1/procesos/* · HU-04 a HU-07)</td>
+<td>POST con nombre único o repetido; GET /buscar?nombre=vacaciones&amp;estado=BORRADOR; POST /{id}/publicar, /inactivar y /reactivar.</td>
+<td>HTTP 201 al crear; HTTP 400 si el nombre ya existe en la empresa; página JSON filtrada en /buscar; transiciones de estado válidas y registro en HistorialCambio.</td>
+<td>HTTP 201, 200 y 400 verificados. Aprobado (ProcesoControllerTest y ProcesoServiceTest).</td>
+</tr>
+<tr>
+<td>CF-BE-06</td>
+<td>Reglas de Pools y Lanes (/api/v1/procesos/{id}/pools y /lanes · HU-21, HU-22)</td>
+<td>Crear segundo pool PROPIETARIO; crear lane en pool CLIENTE (externo); reordenar lanes con PUT /lanes/reordenar; eliminar pool con lanes.</td>
+<td>Rechaza con HTTP 400 un segundo pool PROPIETARIO, la creación de lanes en pools externos y el borrado de pools no vacíos; actualiza orden de lanes con HTTP 200.</td>
+<td>Reglas de dominio cumplidas al 100 %. Aprobado (PoolControllerTest y LaneControllerTest).</td>
+</tr>
+<tr>
+<td>CF-BE-07</td>
+<td>Actividades y posicionamiento 2D (/actividades, /buscar, /mover y /elementos/{id}/posicion · HU-08 a HU-10)</td>
+<td>POST actividad en lane de pool propietario vs. pool externo; POST /{id}/mover con {laneId, posicionX: 240, posicionY: 40}; DELETE /{id} con arcos conectados.</td>
+<td>HTTP 201 en pool propietario y HTTP 400 en pool externo; actualización exacta de coordenadas y lane; eliminación lógica en cascada de los arcos incidentes.</td>
+<td>HTTP 201, 200 y 204 verificados. Aprobado (ActividadControllerTest y ElementoConectableTest).</td>
+</tr>
+<tr>
+<td>CF-BE-08</td>
+<td>Arcos de secuencia (/api/v1/procesos/{id}/arcos · HU-11 a HU-13)</td>
+<td>POST arco con origenId == destinoId (auto-bucle), arco duplicado entre los mismos nodos y arco válido entre actividad y gateway con condición.</td>
+<td>Rechaza auto-bucles y arcos duplicados con HTTP 400; crea el arco válido con HTTP 201 y permite actualizar su condición con PUT.</td>
+<td>HTTP 400 y 201 verificados. Aprobado (ArcoControllerTest y ArcoServiceTest).</td>
+</tr>
+<tr>
+<td>CF-BE-09</td>
+<td>Gateways y validación de salidas al publicar (/gateways y /procesos/{id}/publicar · HU-14 a HU-16)</td>
+<td>1. Publicar proceso con un gateway que tiene &lt; 2 salidas o salidas sin condición (si no es PARALELO). 2. Cambiar gateway EXCLUSIVO a PARALELO con PUT.</td>
+<td>El backend impide publicar el proceso (HTTP 400) indicando qué gateway incumple; al cambiar a PARALELO limpia las condiciones de sus arcos salientes; GET /advertencia-eliminar informa arcos afectados.</td>
+<td>Validaciones aprobadas al 100 % (GatewayControllerTest y GatewayServiceTest).</td>
+</tr>
+<tr>
+<td>CF-BE-10</td>
+<td>Catálogo de roles de proceso y bloqueo de borrado en uso (/api/v1/roles-proceso · HU-17 a HU-20)</td>
+<td>Crear rol, asignarlo a una lane y enviar DELETE /api/v1/roles-proceso/{id}. Luego desasignarlo de la lane y repetir DELETE.</td>
+<td>Mientras está asignado devuelve eliminable=false, lista procesosEnUso y rechaza el DELETE con HTTP 400/409. Al quedar libre permite el borrado lógico (HTTP 204).</td>
+<td>Comportamiento verificado con y sin lanes. Aprobado (RolProcesoControllerTest y UsoRolProcesoConLanesTest).</td>
+</tr>
+<tr>
+<td>CF-BE-11</td>
+<td>Flujos de mensaje entre pools (/api/v1/procesos/{id}/mensajes · HU-25 a HU-28)</td>
+<td>POST mensaje entre el mismo pool; mensaje CATCH con destinoExterno; mensaje THROW a destino externo sin politicaFallo; y mensaje válido con correlationKey y payload.</td>
+<td>Rechaza con HTTP 400 mensajes dentro del mismo pool, CATCH con destino externo, THROW externo sin política o payload &gt; 4000 caracteres; persiste el mensaje válido con HTTP 201.</td>
+<td>Todas las reglas verificadas. Aprobado (MensajeControllerTest y MensajeServiceTest).</td>
+</tr>
+<tr>
+<td>CF-BE-12</td>
+<td>Compartición entre empresas, permisos por pool e historial (/comparticion, /permisos, /historial · HU-23, HU-24)</td>
+<td>PUT /procesos/{id}/comparticion con empresasInvitadas=[2]; GET proceso desde Empresa 2; PUT /pools/{poolId}/permisos; GET /api/v1/historial.</td>
+<td>Empresa 2 obtiene acceso de solo lectura (esSoloLectura=true) pero no puede editar; los permisos del pool se guardan por rol; /historial devuelve la bitácora ordenada por fecha.</td>
+<td>Aprobado (NovedadesControllerTest, ComparticionServiceTest, PermisoPoolServiceTest y AuditoriaServiceTest).</td>
+</tr>
+</tbody>
+</table>
+<p>Tabla 2. Casos funcionales y de reglas de negocio verificados sobre la API REST del Backend Spring Boot (MockMvc, SeguridadIntegracionTest y colección Postman).</p>
+<h3>Defectos</h3>
+<table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Severidad</th>
+<th>Descripción</th>
+<th>Estado / enlace</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>DEF-01</td>
+<td>Alta</td>
+<td>Al abrir la vista de actividades (/procesos/:id/actividades), el frontend invocaba GET /api/v1/procesos/{id}/actividades/buscar y el backend respondía HTTP 400 porque &quot;buscar&quot; se interpretaba como path variable {id} numérico.</td>
+<td>Corregido y verificado (commit 1af3be8 en Proyecto1: endpoint paginado GET /actividades/buscar y pruebas en ActividadControllerTest).</td>
+</tr>
+<tr>
+<td>DEF-02</td>
+<td>Media</td>
+<td>En ActividadListComponent la validación obsoleta this.propia() comparaba un campo no presente en ProcesoRespuestaDTO y ocultaba el botón &quot;+ Nueva actividad&quot; al propietario.</td>
+<td>Corregido y verificado en Proyecto2 (delegación de permisos en rolAcceso y ProcesoController.acceso).</td>
+</tr>
+<tr>
+<td>DEF-03</td>
+<td>Media</td>
+<td>Al arrastrar el conector de una actividad a otra en navegadores Chromium sobre Linux, el evento (drop) no se disparaba porque dataTransfer.effectAllowed estaba en &quot;link&quot; y dropEffect en &quot;move&quot;.</td>
+<td>Corregido y verificado (PR #12 / commit ca32239 en Proyecto2: unificación en &quot;move&quot;, control de relatedTarget y capa SVG con vista previa).</td>
+</tr>
+<tr>
+<td>DEF-04</td>
+<td>Media</td>
+<td>Las actividades y gateways creados desde formulario sin coordenadas explícitas se superponían en (0, 0) dentro de la lane.</td>
+<td>Corregido y verificado (PR #13 / commit e5a2a79: cálculo automático de primera posición libre en la lane y conectores circulares en hover).</td>
+</tr>
+<tr>
+<td>DEF-05</td>
+<td>Alta</td>
+<td>Un usuario con rol ADMIN podía cambiar su propio rol a LECTURA, desactivar o eliminar su propia cuenta desde /api/v1/usuarios/{id}/*, dejando a la empresa sin administrador.</td>
+<td>Corregido y verificado (validación noEsElMismo en UsuarioController.java y pruebas en UsuarioControllerTest).</td>
+</tr>
+<tr>
+<td>DEF-06</td>
+<td>Media</td>
+<td>En la primera corrida de la suite Selenium E2E, los casos E2E-05 y E2E-08 fallaban de forma intermitente porque la prueba leía las filas de la tabla mientras Angular aún estaba redibujando el filtro.</td>
+<td>Corregido y verificado en PaginaProcesos.java (espera explícita de actualización de DOM; 14 / 14 casos estables en las corridas posteriores).</td>
+</tr>
+<tr>
+<td>DEF-07</td>
+<td>Baja</td>
+<td>Cuando un usuario con rol LECTURA abre un proceso cuyo lienzo está vacío, el mensaje informativo del tablero menciona arrastrar elementos desde la paleta, aunque dicho rol no tiene paleta visible.</td>
+<td>Abierto (mejora cosmética menor de texto en interfaz; no afecta la seguridad ni la funcionalidad de solo lectura).</td>
+</tr>
+</tbody>
+</table>
+<p>Tabla 3. Registro de defectos detectados durante las pruebas de integración y funcionales, con su severidad y estado de resolución.</p>
