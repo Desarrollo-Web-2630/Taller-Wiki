@@ -35,8 +35,9 @@ src/main/resources/
    * **Arcos:** HU-11 (Crear), HU-12 (Editar), HU-13 (Eliminar).
    * **Gateways:** HU-14 (Crear), HU-15 (Editar), HU-16 (Eliminar).
    * **Roles:** HU-17 (Crear), HU-18 (Editar), HU-19 (Eliminar), HU-20 (Consultar).
-4. **Roadmap (`/wiki/entregas`):** Entrega 1 (14/09 - 15%), Entrega 2 (21/10 - 25%), Entrega Final (25/11 - 20%).
-5. **Contacto (`/contacto`):** Formulario con validaciones en JS.
+4. **Documentación (`/wiki/documentacion`):** los ocho documentos de la entrega final (resumen ejecutivo, arquitectura C4, despliegue, pruebas de carga, funcionales, unitarias con SonarQube y automatizadas, y roles y seguridad).
+5. **Roadmap (`/wiki/entregas`):** Entrega 1 (14/09 - 15%), Entrega 2 (21/10 - 25%), Entrega Final (25/11 - 20%).
+6. **Contacto (`/contacto`):** Formulario con validaciones en JS.
 
 
 ## Buscador

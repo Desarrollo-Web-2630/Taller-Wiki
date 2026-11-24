@@ -54,6 +54,8 @@ INSERT INTO wiki_entry (id, title, url, parent_id, order_index, active, content_
 INSERT INTO wiki_entry (id, title, url, parent_id, order_index, active, content_path) VALUES (36, 'Pruebas automatizadas', '/wiki/documentacion/pruebas-automatizadas', 32, 7, false, 'wiki/pruebas-automatizadas.html');
 INSERT INTO wiki_entry (id, title, url, parent_id, order_index, active, content_path) VALUES (37, 'Resumen ejecutivo', '/wiki/documentacion/resumen-ejecutivo', 32, 1, false, 'wiki/resumen-ejecutivo.html');
 INSERT INTO wiki_entry (id, title, url, parent_id, order_index, active, content_path) VALUES (38, 'Pruebas funcionales', '/wiki/documentacion/pruebas-funcionales', 32, 5, false, 'wiki/pruebas-funcionales.html');
+INSERT INTO wiki_entry (id, title, url, parent_id, order_index, active, content_path) VALUES (39, 'Arquitectura C4', '/wiki/documentacion/arquitectura-c4', 32, 2, false, 'wiki/arquitectura-c4.html');
+INSERT INTO wiki_entry (id, title, url, parent_id, order_index, active, content_path) VALUES (40, 'Guía de despliegue', '/wiki/documentacion/despliegue', 32, 3, false, 'wiki/despliegue.html');
 
 -- ============================================================
 -- Sistema de etiquetas / categorias
@@ -113,3 +115,5 @@ INSERT INTO wiki_entry_category (entry_id, category_id) VALUES (35, 11);  -- Pru
 INSERT INTO wiki_entry_category (entry_id, category_id) VALUES (36, 11), (36, 12);  -- Pruebas automatizadas
 INSERT INTO wiki_entry_category (entry_id, category_id) VALUES (37, 10), (37, 11), (37, 12);  -- Resumen ejecutivo
 INSERT INTO wiki_entry_category (entry_id, category_id) VALUES (38, 11), (38, 12);  -- Pruebas funcionales
+INSERT INTO wiki_entry_category (entry_id, category_id) VALUES (39, 1), (39, 10);
+INSERT INTO wiki_entry_category (entry_id, category_id) VALUES (40, 10);

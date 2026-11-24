@@ -1,0 +1,336 @@
+<h2>Ficha del documento</h2>
+<table>
+<thead>
+<tr>
+<th>Dato</th>
+<th>Información</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Institución / asignatura</td>
+<td>Pontificia Universidad Javeriana · Desarrollo Web</td>
+</tr>
+<tr>
+<td>Nombre del proyecto</td>
+<td>Sistema de Gestión de Procesos multiempresa (visor y editor de procesos BPMN)</td>
+</tr>
+<tr>
+<td>Equipo / integrantes</td>
+<td>Héctor Estrada, Mariana Osorio, Iván Pardo y Sebastián Velásquez</td>
+</tr>
+<tr>
+<td>Docente</td>
+<td>Pablo Márquez</td>
+</tr>
+<tr>
+<td>Versión / fecha</td>
+<td>Versión 1.2 · 23/11/2026 (configuración de la rama main del 22/11/2026 y clúster verificado el 23/11/2026)</td>
+</tr>
+<tr>
+<td>Enlace al repositorio</td>
+<td>Backend: github.com/Desarrollo-Web-2630/Proyecto1 · Frontend: github.com/Desarrollo-Web-2630/Proyecto2</td>
+</tr>
+</tbody>
+</table>
+<h2>1. Alcance y prerrequisitos</h2>
+<p><strong>Ambientes disponibles (local, pruebas, producción): </strong>el sistema tiene dos repositorios (backend y frontend) que se despliegan por separado. Hay tres ambientes; no existe un ambiente de pruebas aparte, las pruebas automáticas corren en local con H2 antes de hacer merge a main:</p>
+<ul>
+<li>Local de desarrollo: backend con ./mvnw spring-boot:run y perfil h2 (base en memoria) y frontend con npm start en http://localhost:4200. Sin backend, el frontend se prueba con npm run mock.</li>
+<li>Local con Docker Compose: cada repositorio trae su docker-compose.yml; el del backend levanta PostgreSQL 16 + API y el del frontend levanta API (perfil h2) + nginx con la SPA en http://localhost:4200.</li>
+<li>Producción (curso): MicroK8s en una VM de la universidad (10.43.99.75), namespace procesos, desplegado automáticamente con GitHub Actions en cada push a main. En el mismo namespace corre la wiki del proyecto (procesos-wiki), publicada en /wiki.</li>
+<li>Vitrina en Vercel: solo la landing pública del frontend; no tiene backend, así que el login y lo que llama a /api no funcionan allí.</li>
+</ul>
+<p><strong>Infraestructura requerida:</strong></p>
+<ul>
+<li>VM Ubuntu 22.04.5 LTS en la red de la Javeriana, con mínimo 2 CPU, 4 GB de RAM y 20 GB de disco; acceso por SSH con la VPN conectada (usuario estudiante).</li>
+<li>MicroK8s 1.30 con los complementos dns, ingress (NGINX Ingress Controller) y hostpath-storage (para el volumen de PostgreSQL).</li>
+<li>Un runner self-hosted de GitHub Actions instalado en la VM con la etiqueta main (uno a nivel de organización o uno por repositorio).</li>
+<li>GitHub Container Registry (GHCR) para guardar las imágenes y runners ubuntu-latest de GitHub para construirlas.</li>
+<li>Recursos reservados en el clúster: backend 200m CPU / 384–768 Mi; frontend 50m / 32–128 Mi por réplica; PostgreSQL 100m / 256–512 Mi y un PVC de 1 Gi.</li>
+</ul>
+<p><strong>Dependencias y versiones:</strong></p>
+<ul>
+<li>Backend: Java 17 (imagen eclipse-temurin:17-jre), Maven 3.9 para compilar, Spring Boot 3.3.2, driver de PostgreSQL y H2.</li>
+<li>Frontend: Node 22 (alpine) para compilar, Angular 20.3, nginx 1.27-alpine para servir.</li>
+<li>Base de datos: imagen oficial postgres:16.</li>
+<li>Despliegue: Docker, MicroK8s 1.30 (kubectl incluido), acciones actions/checkout@v4 y docker/login-action@v3.</li>
+<li>Local: JDK 17+, Node 22 y npm, Docker Desktop (opcional) y Git.</li>
+</ul>
+<p><strong>Accesos y permisos requeridos:</strong></p>
+<ul>
+<li>VPN de la Javeriana para llegar a la VM y a la aplicación.</li>
+<li>Cuenta en la VM con sudo; el usuario del runner debe poder ejecutar sudo microk8s sin contraseña (regla en /etc/sudoers.d/microk8s-runner).</li>
+<li>Administrador de la organización Desarrollo-Web-2630 en GitHub para registrar el runner a nivel de organización (si no, uno por repositorio).</li>
+<li>Permiso packages: write del workflow para publicar en GHCR (lo da el GITHUB_TOKEN) y un token personal con read:packages para el secret ghcr-secret que usa el clúster para bajar las imágenes.</li>
+<li>Usuarios de la aplicación: el admin de demo admin@demo.com y los que cada empresa registre (roles ADMIN, EDITOR y LECTURA).</li>
+</ul>
+<h2>2. Configuración</h2>
+<p><strong>Variables de entorno (sin divulgar secretos): </strong>el backend lee toda su configuración de variables de entorno; ningún valor real se versiona. En el clúster las de credenciales vienen del Secret procesos-secrets y el resto las fija k8s/backend.yaml:</p>
+<ul>
+<li>Base de datos: DB_HOST (procesos-db), DB_PORT (5432), DB_NAME, DB_USER, DB_PASSWORD (Secret).</li>
+<li>Seguridad: JWT_SECRET (Secret, mínimo 32 caracteres), JWT_EXPIRACION_MINUTOS (60 por defecto), APP_CORS_ORIGENES (http y https de 10.43.99.75).</li>
+<li>Datos iniciales: DEMO_ADMIN_PASSWORD (Secret): contraseña del admin de demo que se crea con la base vacía.</li>
+<li>Correo: APP_MAIL_ENABLED=false en el despliegue; con true se usan MAIL_HOST, MAIL_PORT, MAIL_USERNAME y MAIL_PASSWORD.</li>
+<li>Enlaces y JVM: APP_BACKEND_BASE_URL y APP_FRONTEND_BASE_URL (http://10.43.99.75), SPRING_JPA_HIBERNATE_DDL_AUTO=update, JAVA_TOOL_OPTIONS=-XX:MaxRAMPercentage=75.</li>
+<li>Frontend: solo BACKEND_URL (http://procesos-backend:8080), que nginx usa para reenviar /api/.</li>
+<li>Workflows: NAMESPACE=procesos y DOMINIO=10.43.99.75 en .github/workflows/deploy.yml de cada repositorio.</li>
+</ul>
+<p><strong>Configuración de base de datos: </strong>PostgreSQL 16 corre en el Deployment procesos-db con estrategia Recreate (dos pods no pueden usar el mismo disco) y guarda los datos en el PVC procesos-db-datos de 1 Gi, montado con PGDATA=/var/lib/postgresql/data/pgdata porque el volumen trae una carpeta lost+found. Nombre, usuario y contraseña salen del Secret. Se expone solo dentro del clúster con el Service procesos-db:5432 y tiene readiness probe con pg_isready. El perfil h2 usa H2 en memoria en modo PostgreSQL, y en Docker Compose local la base es postgres:16 con un volumen pgdata.</p>
+<p><strong>Configuración de frontend y backend:</strong></p>
+<ul>
+<li>Backend: imagen de dos etapas (maven:3.9-eclipse-temurin-17 compila con mvn package -DskipTests; eclipse-temurin:17-jre ejecuta el jar en el puerto 8080). Perfiles: h2, local, postman y sin perfil para despliegue. Readiness probe en /v3/api-docs a los 20 s y liveness a los 120 s; 1 réplica con imagePullPolicy: Always.</li>
+<li>Frontend: imagen de dos etapas (node:22-alpine ejecuta npm ci y npm run build; nginx:1.27-alpine sirve dist/procesos-front/browser). nginx/default.conf.template reenvía /api/ a ${BACKEND_URL}, redirige las rutas de Angular a index.html y agrega encabezados de seguridad. 2 réplicas con readiness probe en /.</li>
+<li>Ingress procesos: clase public de MicroK8s, sin host (responde por la IP). /api, /swagger-ui y /v3/api-docs van a procesos-backend:8080 y / a procesos-frontend:80.</li>
+<li>Los manifiestos usan los marcadores __OWNER__ y __DOMINIO__, que el workflow reemplaza con sed antes de aplicarlos.</li>
+</ul>
+<p><strong>Manejo de secretos:</strong></p>
+<ul>
+<li>Los dos Secrets se crean a mano una sola vez en el servidor y nunca se suben al repositorio: procesos-secrets (DB_NAME, DB_USER, DB_PASSWORD, JWT_SECRET, DEMO_ADMIN_PASSWORD) y ghcr-secret (tipo docker-registry, para bajar las imágenes privadas de GHCR).</li>
+<li>k8s/secret.example.yaml solo muestra la forma del Secret, con valores CAMBIAR; el workflow no lo aplica.</li>
+<li>Las contraseñas se generan en el servidor con openssl rand -base64.</li>
+<li>En GitHub Actions solo se usa el GITHUB_TOKEN automático para publicar en GHCR; no hay secretos propios en los workflows.</li>
+<li>Si un valor cambia, se reinicia el backend para que lo lea: kubectl rollout restart deployment/procesos-backend.</li>
+</ul>
+<h2>3. Procedimiento de despliegue</h2>
+<h3>Preparación del entorno</h3>
+<p>Se hace una sola vez en la VM, con la VPN conectada y por SSH:</p>
+<pre><code>sudo apt update &amp;&amp; sudo apt -y upgrade
+sudo snap install microk8s --classic --channel=1.30/stable
+sudo microk8s status --wait-ready
+sudo microk8s enable dns ingress hostpath-storage
+sudo microk8s kubectl create namespace procesos
+echo "estudiante ALL=(ALL) NOPASSWD: /snap/bin/microk8s" | sudo tee /etc/sudoers.d/microk8s-runner
+./config.sh --url &lt;url&gt; --token &lt;token&gt; --labels main
+sudo ./svc.sh install &amp;&amp; sudo ./svc.sh start
+sudo microk8s kubectl create secret docker-registry ghcr-secret --docker-server=ghcr.io \
+  --docker-username=&lt;usuario_github&gt; --docker-password=&lt;token_read_packages&gt; -n procesos
+sudo microk8s kubectl create secret generic procesos-secrets -n procesos \
+  --from-literal=DB_NAME=procesos --from-literal=DB_USER=procesos \
+  --from-literal=DB_PASSWORD="$(openssl rand -base64 24)" \
+  --from-literal=JWT_SECRET="$(openssl rand -base64 48)" \
+  --from-literal=DEMO_ADMIN_PASSWORD='&lt;clave del admin demo&gt;'</code></pre>
+<h3>Construcción / empaquetado</h3>
+<p>Lo hace el job 1 (build-and-publish) de cada workflow en un runner de GitHub: descarga el código, inicia sesión en GHCR con el GITHUB_TOKEN, construye la imagen con el Dockerfile multietapa y la publica con dos tags: latest y los 7 primeros caracteres del commit, para poder volver a una versión exacta. Las imágenes quedan como ghcr.io/desarrollo-web-2630/procesos-backend y ghcr.io/desarrollo-web-2630/procesos-frontend. En local el mismo empaquetado se prueba con:</p>
+<pre><code>cd thymeleaf &amp;&amp; docker build -t procesos-backend .
+cd front &amp;&amp; docker build -t procesos-front .
+docker compose up --build</code></pre>
+<h3>Ejecución de migraciones</h3>
+<p>El proyecto no usa una herramienta de migraciones (Flyway o Liquibase). En el clúster Hibernate crea y ajusta las tablas al arrancar (SPRING_JPA_HIBERNATE_DDL_AUTO=update), así que el primer despliegue funciona con la base vacía. Con la base vacía, DataInitializer crea la empresa Empresa Demo, el usuario admin@demo.com (activo si se definió DEMO_ADMIN_PASSWORD) y el proceso Solicitud de vacaciones. El valor por defecto de la aplicación es ddl-auto=none, para que nunca modifique una base que no se haya configurado a propósito. Antes de un cambio de modelo que borre o renombre columnas se toma un respaldo con pg_dump (sección 4), porque update solo agrega.</p>
+<h3>Despliegue de componentes</h3>
+<p>Lo hace el job 2 (deploy-onpremise) en el runner self-hosted de la VM. Revisa si el Deployment ya existe, reemplaza los marcadores de los manifiestos, los aplica, fuerza rollout restart (con el tag latest el apply no cambia el pod) y espera con rollout status; si un pod no queda listo, el job termina en rojo. El orden importa solo la primera vez, porque nginx del frontend necesita que ya exista el Service del backend:</p>
+<ol>
+<li>Push a main de Proyecto1 (o Run workflow en Actions): postgres.yaml + backend.yaml.</li>
+<li>Cuando termine en verde, push a main de Proyecto2: frontend.yaml + ingress.yaml.</li>
+</ol>
+<pre><code>sed -e "s|__OWNER__|${OWNER_LC}|g" -e "s|__DOMINIO__|${DOMINIO}|g" "$f" \
+  | sudo microk8s kubectl apply -n "$NAMESPACE" -f -
+sudo microk8s kubectl rollout restart deployment/procesos-backend -n procesos
+sudo microk8s kubectl rollout status deployment/procesos-backend -n procesos --timeout=300s</code></pre>
+<p>Después del primer despliegue, cada repositorio se despliega solo con su propio push a main.</p>
+<h3>Verificación posterior al despliegue</h3>
+<p>El job 2 ya valida que los pods queden listos. Además se comprueba a mano:</p>
+<pre><code>sudo microk8s kubectl get pods,svc,ingress,pvc -n procesos
+curl -i http://10.43.99.75/
+curl -i http://10.43.99.75/api/v1/procesos
+curl -i -X POST http://10.43.99.75/api/auth/login -H 'Content-Type: application/json' \
+  -d '{"correo":"admin@demo.com","password":"&lt;DEMO_ADMIN_PASSWORD&gt;"}'</code></pre>
+<p>En el navegador: http://10.43.99.75 (aplicación) y http://10.43.99.75/swagger-ui.html (API). Estado en el monitor del curso: https://javeriana.inphotech.co/k8smonitor.</p>
+<h2>4. Operación y recuperación</h2>
+<p><strong>Comandos de inicio, parada y reinicio:</strong></p>
+<pre><code>NS=procesos
+sudo microk8s kubectl scale deployment/procesos-backend --replicas=0 -n $NS
+sudo microk8s kubectl scale deployment/procesos-backend --replicas=1 -n $NS
+sudo microk8s kubectl rollout restart deployment/procesos-backend -n $NS
+sudo microk8s stop
+sudo microk8s start</code></pre>
+<p>Igual para procesos-frontend (2 réplicas) y procesos-db (1 réplica). Las dos últimas líneas detienen y arrancan todo el clúster.</p>
+<p><strong>Registros y monitoreo:</strong></p>
+<pre><code>sudo microk8s kubectl logs -f deployment/procesos-backend -n procesos
+sudo microk8s kubectl describe pod &lt;pod&gt; -n procesos
+sudo microk8s kubectl get events -n procesos --sort-by=.lastTimestamp</code></pre>
+<ul>
+<li>Cada ejecución del workflow queda en la pestaña Actions de cada repositorio, con el log de cada paso.</li>
+<li>Las readiness y liveness probes sacan del Service y reinician un pod que deja de responder.</li>
+<li>El monitor del curso (https://javeriana.inphotech.co/k8smonitor) muestra el estado del namespace, los pods y los servicios.</li>
+<li>Con el correo desactivado, los enlaces de activación de cuenta aparecen en el log del backend.</li>
+</ul>
+<p><strong>Estrategia de reversión (rollback): </strong>como cada imagen se publica también con el SHA corto del commit, se puede volver a la versión anterior o a una exacta:</p>
+<pre><code>sudo microk8s kubectl rollout undo deployment/procesos-backend -n procesos
+sudo microk8s kubectl set image deployment/procesos-backend \
+  procesos-backend=ghcr.io/desarrollo-web-2630/procesos-backend:&lt;sha7&gt; -n procesos</code></pre>
+<ul>
+<li>La otra opción es revertir el commit en main (git revert) para que el workflow vuelva a desplegar el código anterior.</li>
+<li>Si el cambio tocó la base, se restaura el respaldo tomado antes del despliegue.</li>
+</ul>
+<p><strong>Respaldo y recuperación: </strong>los datos viven en el PVC procesos-db-datos y sobreviven a reinicios y redespliegues del pod; borrar el PVC borra la base. Respaldo y restauración con pg_dump/psql dentro del pod:</p>
+<pre><code>sudo microk8s kubectl exec deployment/procesos-db -n procesos -- \
+  sh -c 'pg_dump -U "$POSTGRES_USER" "$POSTGRES_DB"' &gt; respaldo_$(date +%F).sql
+sudo microk8s kubectl exec -i deployment/procesos-db -n procesos -- \
+  sh -c 'psql -U "$POSTGRES_USER" "$POSTGRES_DB"' &lt; respaldo_AAAA-MM-DD.sql</code></pre>
+<h3>Problemas conocidos</h3>
+<ul>
+<li>Job en &quot;Waiting for a runner&quot;: el runner está apagado, tiene una etiqueta distinta de main o quedó registrado solo en el otro repositorio.</li>
+<li>ImagePullBackOff: falta ghcr-secret en el namespace o el paquete de GHCR es privado.</li>
+<li>CreateContainerConfigError: falta el Secret procesos-secrets o una de sus claves.</li>
+<li>Backend en CrashLoopBackOff: casi siempre la conexión a la base o un JWT_SECRET de menos de 32 caracteres; revisar los logs.</li>
+<li>procesos-db en Pending: no se creó el PVC porque falta microk8s enable hostpath-storage.</li>
+<li>Frontend en CrashLoopBackOff (host not found in upstream): se desplegó antes que el backend.</li>
+<li>404 o 503 desde el Ingress: el Ingress no existe (falta desplegar el frontend) o los pods aún no están listos.</li>
+<li>El sitio sigue con el código viejo: el job no corrió rollout restart, necesario con el tag latest.</li>
+<li>Aviso &quot;Node.js 20 is deprecated&quot; en Actions: es una advertencia de GitHub sobre las acciones checkout y docker/login; no hace fallar el despliegue. Se resuelve actualizando esas acciones a sus versiones más recientes.</li>
+<li>Limitaciones aceptadas: la aplicación se sirve por HTTP sin TLS (solo dentro de la VPN), no hay herramienta de migraciones y PostgreSQL es una sola instancia, así que un cambio en la base implica una caída corta.</li>
+</ul>
+<h2>5. Evidencias</h2>
+<p><strong>URL de acceso (si aplica):</strong></p>
+<ul>
+<li>Aplicación: http://10.43.99.75 (desde la red de la Javeriana o con su VPN).</li>
+<li>API y Swagger: http://10.43.99.75/api/... y http://10.43.99.75/swagger-ui.html.</li>
+<li>Wiki del proyecto: http://10.43.99.75/wiki.</li>
+<li>Monitor del curso: https://javeriana.inphotech.co/k8smonitor (el 23/11/2026 respondía &quot;no available server&quot;; el estado del clúster se tomó con kubectl, Figura 6).</li>
+<li>Vitrina de la landing (sin backend): https://proyecto2-git-main-sebasve0810s-projects.vercel.app.</li>
+</ul>
+<p>Capturas de ejecución: la Figura 1 muestra el flujo completo de despliegue. Las Figuras 2 a 5 son las ejecuciones de GitHub Actions: todas terminaron en Success, con los jobs de construcción y de despliegue en MicroK8s en verde. La Figura 6 muestra el estado del clúster y la Figura 7 el smoke test, ambos tomados en la VM el 23/11/2026.</p>
+<figure class="wiki-figure">
+  <img src="/images/documentacion/despliegue/fig1.png" alt="Figura 1. Flujo de CI/CD y recursos de Kubernetes del sistema en el namespace procesos." loading="lazy" />
+  <figcaption>Figura 1. Flujo de CI/CD y recursos de Kubernetes del sistema en el namespace procesos.</figcaption>
+</figure>
+<figure class="wiki-figure">
+  <img src="/images/documentacion/despliegue/fig2.png" alt="Figura 2. Ejecuciones del workflow Build and Deploy (backend) en Proyecto1: las 4 en Success." loading="lazy" />
+  <figcaption>Figura 2. Ejecuciones del workflow Build and Deploy (backend) en Proyecto1: las 4 en Success.</figcaption>
+</figure>
+<figure class="wiki-figure">
+  <img src="/images/documentacion/despliegue/fig3.png" alt="Figura 3. Detalle de la ejecución #4 del backend (commit 563c7e6): Build and Push Image to GHCR y Deploy on MicroK8s On-Premise en verde." loading="lazy" />
+  <figcaption>Figura 3. Detalle de la ejecución #4 del backend (commit 563c7e6): Build and Push Image to GHCR y Deploy on MicroK8s On-Premise en verde.</figcaption>
+</figure>
+<figure class="wiki-figure">
+  <img src="/images/documentacion/despliegue/fig4.png" alt="Figura 4. Ejecuciones del workflow Build and Deploy (frontend) en Proyecto2: las 3 en Success." loading="lazy" />
+  <figcaption>Figura 4. Ejecuciones del workflow Build and Deploy (frontend) en Proyecto2: las 3 en Success.</figcaption>
+</figure>
+<figure class="wiki-figure">
+  <img src="/images/documentacion/despliegue/fig5.png" alt="Figura 5. Detalle de la ejecución #3 del frontend (commit f7252f0): los dos jobs en verde." loading="lazy" />
+  <figcaption>Figura 5. Detalle de la ejecución #3 del frontend (commit f7252f0): los dos jobs en verde.</figcaption>
+</figure>
+<figure class="wiki-figure">
+  <img src="/images/documentacion/despliegue/fig6.png" alt="Figura 6. Salida de kubectl get pods,svc,ingress,pvc -n procesos en la VM (23/11/2026): todos los pods en Running 1/1 y el PVC en Bound." loading="lazy" />
+  <figcaption>Figura 6. Salida de kubectl get pods,svc,ingress,pvc -n procesos en la VM (23/11/2026): todos los pods en Running 1/1 y el PVC en Bound.</figcaption>
+</figure>
+<figure class="wiki-figure">
+  <img src="/images/documentacion/despliegue/fig7.png" alt="Figura 7. Smoke test ejecutado en la VM el 23/11/2026: GET / 200, GET /api/v1/procesos sin token 401, GET /wiki 200 y login 200. La clave se lee del Secret sin mostrarla." loading="lazy" />
+  <figcaption>Figura 7. Smoke test ejecutado en la VM el 23/11/2026: GET / 200, GET /api/v1/procesos sin token 401, GET /wiki 200 y login 200. La clave se lee del Secret sin mostrarla.</figcaption>
+</figure>
+<p><strong>Resultado de validación / smoke test: </strong>se ejecutó en la VM el 23/11/2026 a las 13:45, sobre el despliegue de las ejecuciones del 22/11 (Figuras 6 y 7). Todos los pasos dieron el resultado esperado:</p>
+<ul>
+<li>Pods: procesos-db, procesos-backend, los dos de procesos-frontend y procesos-wiki en Running, READY 1/1 y 0 reinicios; PVC procesos-db-datos en Bound. OK.</li>
+<li>GET / responde 200 (carga la SPA). OK.</li>
+<li>GET /api/v1/procesos sin token responde 401: la API está protegida. OK.</li>
+<li>GET /wiki responde 200: la wiki está publicada por su Ingress. OK.</li>
+<li>POST /api/auth/login con admin@demo.com responde 200 con el token. OK.</li>
+</ul>
+<h3>Matriz de ambientes</h3>
+<table>
+<thead>
+<tr>
+<th>Ambiente</th>
+<th>URL / host</th>
+<th>Componentes</th>
+<th>Responsable</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Local de desarrollo</td>
+<td>localhost:8080 (API) y localhost:4200 (SPA)</td>
+<td>Spring Boot con perfil h2, ng serve con proxy /api; o mock (npm run mock)</td>
+<td>Cada integrante</td>
+</tr>
+<tr>
+<td>Local con Docker Compose</td>
+<td>localhost:8080 y localhost:4200</td>
+<td>PostgreSQL 16 + API (Proyecto1) o API h2 + nginx/Angular (Proyecto2)</td>
+<td>Cada integrante</td>
+</tr>
+<tr>
+<td>Producción (MicroK8s)</td>
+<td>http://10.43.99.75 (VPN Javeriana)</td>
+<td>Ingress, procesos-frontend x2, procesos-backend x1, procesos-db + PVC</td>
+<td>Equipo; configuración inicial: Mariana Osorio</td>
+</tr>
+<tr>
+<td>Vitrina (Vercel)</td>
+<td>proyecto2-git-main-sebasve0810s-projects.vercel.app</td>
+<td>Solo la landing estática del frontend</td>
+<td>Sebastián Velásquez</td>
+</tr>
+</tbody>
+</table>
+<h3>Registro de despliegues</h3>
+<table>
+<thead>
+<tr>
+<th>Fecha</th>
+<th>Versión</th>
+<th>Ambiente</th>
+<th>Resultado / evidencia</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>13/10/2026</td>
+<td>Proyecto2 bd8278a (landing)</td>
+<td>Vitrina (Vercel)</td>
+<td>Exitoso: landing publicada en la URL de Vercel</td>
+</tr>
+<tr>
+<td>16/11/2026 14:59</td>
+<td>Backend #1 · b03c82d (workflow de despliegue)</td>
+<td>Producción (MicroK8s)</td>
+<td>Exitoso (5 min 35 s) · Figura 2</td>
+</tr>
+<tr>
+<td>16/11/2026 15:00</td>
+<td>Frontend #1 · 870aa77 (workflow de despliegue)</td>
+<td>Producción (MicroK8s)</td>
+<td>Exitoso (6 min 35 s) · Figura 4</td>
+</tr>
+<tr>
+<td>22/11/2026 17:46</td>
+<td>Frontend #2 · 0e3f30f (PR #16, seguridad)</td>
+<td>Producción (MicroK8s)</td>
+<td>Exitoso (1 min 49 s) · Figura 4</td>
+</tr>
+<tr>
+<td>22/11/2026 17:48</td>
+<td>Backend #2 · b702a44 (PR #28, HU faltantes y seguridad)</td>
+<td>Producción (MicroK8s)</td>
+<td>Exitoso (1 min 56 s) · Figura 2</td>
+</tr>
+<tr>
+<td>22/11/2026 18:13</td>
+<td>Backend #3 · 968613e (pruebas de carga y E2E)</td>
+<td>Producción (MicroK8s)</td>
+<td>Exitoso (2 min 7 s) · Figura 2</td>
+</tr>
+<tr>
+<td>22/11/2026 18:13</td>
+<td>Frontend #3 · f7252f0 (data-testid para E2E)</td>
+<td>Producción (MicroK8s)</td>
+<td>Exitoso (2 min 11 s) · Figuras 4 y 5</td>
+</tr>
+<tr>
+<td>22/11/2026 20:00</td>
+<td>Backend #4 · 563c7e6 (capturas E2E)</td>
+<td>Producción (MicroK8s)</td>
+<td>Exitoso (1 min 56 s) · Figuras 2 y 3</td>
+</tr>
+<tr>
+<td>23/11/2026 13:45</td>
+<td>Verificación del despliegue vigente</td>
+<td>Producción (MicroK8s)</td>
+<td>Smoke test OK: 200, 401, 200, 200 · Figuras 6 y 7</td>
+</tr>
+</tbody>
+</table>
+<h3>Anexos y referencias</h3>
+<p>Repositorio / documentación: backend github.com/Desarrollo-Web-2630/Proyecto1 (manifiestos en thymeleaf/k8s/, workflow en .github/workflows/deploy.yml y guía DESPLIEGUE_K8S.md) · frontend github.com/Desarrollo-Web-2630/Proyecto2 (front/k8s/ y .github/workflows/deploy.yml).</p>
+<p>Capturas, diagramas, reportes, logs u otras evidencias: figuras 1 a 7 de este documento; ejecuciones de los workflows en la pestaña Actions de cada repositorio; monitor https://javeriana.inphotech.co/k8smonitor (no disponible el 23/11/2026). Documento relacionado: Arquitectura C4.</p>

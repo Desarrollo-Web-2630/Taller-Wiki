@@ -1,0 +1,267 @@
+<h2>Ficha del documento</h2>
+<table>
+<thead>
+<tr>
+<th>Dato</th>
+<th>Información</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Institución / asignatura</td>
+<td>Pontificia Universidad Javeriana · Desarrollo Web</td>
+</tr>
+<tr>
+<td>Nombre del proyecto</td>
+<td>Sistema de Gestión de Procesos multiempresa (visor y editor de procesos BPMN)</td>
+</tr>
+<tr>
+<td>Equipo / integrantes</td>
+<td>Héctor Estrada, Mariana Osorio, Iván Pardo y Sebastián Velásquez</td>
+</tr>
+<tr>
+<td>Docente</td>
+<td>Pablo Márquez</td>
+</tr>
+<tr>
+<td>Versión / fecha</td>
+<td>Versión 1.1 · 23/11/2026 (código revisado en la rama main del 22/11/2026)</td>
+</tr>
+<tr>
+<td>Enlace al repositorio</td>
+<td>Backend: github.com/Desarrollo-Web-2630/Proyecto1 · Frontend: github.com/Desarrollo-Web-2630/Proyecto2</td>
+</tr>
+</tbody>
+</table>
+<h2>1. Vista general</h2>
+<p><strong>Objetivo del documento: </strong>describir la arquitectura del Sistema de Gestión de Procesos con el modelo C4, desde el contexto (quién usa el sistema y con qué se comunica) hasta el código de un módulo, y dejar registradas las decisiones de diseño y sus compromisos. Todo lo descrito corresponde al código de la rama main de los dos repositorios (backend y frontend) y a los manifiestos con los que se despliega en MicroK8s.</p>
+<p><strong>Principales decisiones arquitectónicas: </strong>el sistema se divide en una SPA y una API REST independientes, cada una con su repositorio, su imagen Docker y su despliegue. Las decisiones que más pesan son:</p>
+<ul>
+<li>Cliente-servidor con SPA + API REST: Angular en el navegador y Spring Boot como backend, comunicados por JSON.</li>
+<li>Arquitectura en capas en el backend: Controller → Service → Repository → Entity, con DTOs en la frontera de la API.</li>
+<li>Seguridad sin estado: Spring Security con JWT firmado (HMAC-SHA256); no hay sesión en el servidor.</li>
+<li>Aislamiento multiempresa: la empresa del usuario se toma del token ya validado y filtra todas las consultas.</li>
+<li>Borrado lógico: ningún registro se borra físicamente (@SQLDelete + @SQLRestriction sobre el campo status).</li>
+<li>Despliegue en Kubernetes: GitHub Actions construye las imágenes, las publica en GHCR y un runner self-hosted las aplica en MicroK8s detrás de un único Ingress.</li>
+</ul>
+<p><strong>Tecnologías y versiones utilizadas:</strong></p>
+<ul>
+<li>Backend: Java 17, Spring Boot 3.3.2 (Web, Data JPA, Validation, Security, Mail), Hibernate, jjwt (JWT), ModelMapper 3.1.1, Lombok, springdoc-openapi 2.6.0 (Swagger).</li>
+<li>Frontend: Angular 20.3, TypeScript 5.9, RxJS 7.8, componentes standalone con signals; ESLint (angular-eslint 20.7) y Karma/Jasmine para pruebas.</li>
+<li>Persistencia: PostgreSQL 16 en despliegue; H2 en memoria para desarrollo y pruebas.</li>
+<li>Servidor web: nginx 1.27 (alpine) para servir la SPA y reenviar /api al backend.</li>
+<li>Contenedores y despliegue: Docker (builds multietapa), Docker Compose en local, MicroK8s 1.30 con NGINX Ingress, GitHub Container Registry (GHCR) y GitHub Actions.</li>
+<li>Calidad y pruebas: JUnit 5 y Spring Security Test, JaCoCo 0.8.12, SonarQube (sonar-maven-plugin), JMeter (jmeter-maven-plugin 3.8.0), Postman.</li>
+</ul>
+<h2>2. Nivel 1 - Contexto</h2>
+<p><strong>Actores externos: </strong>personas que usan el sistema desde el navegador. El rol de acceso (ADMIN, EDITOR, LECTURA) define qué puede hacer cada una dentro de su empresa:</p>
+<ul>
+<li>Representante de empresa (visitante): registra la empresa con nombre, NIT y correo; el sistema crea su administrador inicial inactivo, que se activa con el enlace que llega por correo.</li>
+<li>Administrador (ADMIN): gestiona usuarios, roles de proceso y los datos de la empresa; es el único que elimina, inactiva o reactiva procesos, los comparte con otras empresas y define qué roles de acceso pueden modificar cada pool.</li>
+<li>Editor (EDITOR): crea y edita procesos y todo su diagrama: actividades, arcos, gateways, pools, lanes y mensajes.</li>
+<li>Usuario de solo lectura (LECTURA): consulta procesos, diagramas, usuarios, roles e historial de su empresa, sin modificar nada. Cualquier usuario puede además ver, en solo lectura, los procesos que otra empresa compartió con la suya.</li>
+</ul>
+<p><strong>Sistemas externos: </strong>el único sistema externo real es el servidor de correo SMTP (por ejemplo Gmail, puerto 587 con STARTTLS), que entrega los correos de verificación y activación de cuenta. En el despliegue del curso el envío está desactivado (APP_MAIL_ENABLED=false) y el enlace se escribe en el log del backend. Los clientes, proveedores y sistemas externos que aparecen como pools en los diagramas BPMN solo se modelan: el sistema no se conecta a ellos, porque modela procesos pero no los ejecuta.</p>
+<p><strong>Descripción de interacciones: </strong>todas las personas acceden por HTTP desde el navegador, dentro de la red de la universidad o con su VPN. El visitante registra la empresa y recibe por correo el enlace para fijar la contraseña del administrador. Después cada usuario inicia sesión con correo y contraseña, recibe un token y con él trabaja solo sobre los procesos de su empresa y los que otras empresas le compartieron. Al cerrar sesión el token queda revocado. El sistema llama al servidor SMTP únicamente para enviar los enlaces de verificación.</p>
+<figure class="wiki-figure">
+  <img src="/images/documentacion/arquitectura-c4/fig1.png" alt="Figura 1. Diagrama de contexto (nivel 1): actores, sistema y sistema externo." loading="lazy" />
+  <figcaption>Figura 1. Diagrama de contexto (nivel 1): actores, sistema y sistema externo.</figcaption>
+</figure>
+<h2>3. Nivel 2 - Contenedores</h2>
+<p><strong>Aplicación frontend: </strong>SPA en Angular 20 (repositorio Proyecto2, carpeta front/). Se compila a archivos estáticos que sirve nginx 1.27 en 2 réplicas; el mismo nginx reenvía /api/ al backend y agrega encabezados de seguridad (X-Content-Type-Options, X-Frame-Options, Referrer-Policy). En el navegador, un interceptor HTTP antepone /api a cada llamada, agrega Authorization: Bearer &lt;token&gt; y cierra la sesión si recibe un 401. Los guards authGuard, invitadoGuard y rolGuard controlan qué pantallas se ven; la sesión se guarda en sessionStorage. Las pantallas se cargan por módulo con lazy loading (procesos, usuarios, roles) e incluyen el editor del diagrama con arrastrar y soltar, la configuración para compartir procesos, los permisos por pool y el historial de cambios.</p>
+<p><strong>Servicios / backend: </strong>API REST en Spring Boot 3.3.2 con Java 17 (repositorio Proyecto1, carpeta thymeleaf/; el nombre viene de la plantilla inicial del proyecto, ya no usa vistas Thymeleaf). Expone /api/auth (login, activación y verificación de correo, logout) y /api/v1/... para empresas, usuarios, procesos, actividades, gateways, arcos, elementos, roles de proceso, pools, lanes, mensajes, compartición de procesos, permisos por pool e historial. Concentra la validación del modelo BPMN, la autenticación con JWT, los permisos por rol y el aislamiento por empresa. La documentación OpenAPI se genera sola en /swagger-ui.html. Corre en un pod con readiness y liveness probes sobre /v3/api-docs.</p>
+<p><strong>Persistencia y almacenamiento: </strong>PostgreSQL 16 en un pod propio (Deployment con estrategia Recreate) y un PersistentVolumeClaim de 1 Gi, para que los datos sobrevivan a reinicios. Las credenciales salen del Secret procesos-secrets y nunca se versionan. El backend accede con JPA/Hibernate; las tablas las crea y actualiza Hibernate (ddl-auto=update). Ningún registro se borra físicamente: cada tabla tiene status (0 activo, 1 borrado). Para desarrollo se usa H2 en memoria (perfil h2). El respaldo se hace con pg_dump sobre el pod (ver DESPLIEGUE_K8S.md).</p>
+<p><strong>Integraciones:</strong></p>
+<ul>
+<li>SPA → API: JSON sobre HTTP con JWT en el encabezado Authorization, a través de nginx (mismo origen, sin CORS en despliegue).</li>
+<li>Ingress NGINX de MicroK8s: entrada única por la IP de la VM (10.43.99.75); /api, /swagger-ui y /v3/api-docs van al Service procesos-backend:8080, /wiki y /api/wiki a la wiki del proyecto (procesos-wiki:8080, Ingress propio) y el resto a procesos-frontend:80.</li>
+<li>API → PostgreSQL: JDBC al Service procesos-db:5432.</li>
+<li>API → SMTP: JavaMailSender (spring-boot-starter-mail), opcional según APP_MAIL_ENABLED.</li>
+<li>CI/CD: GitHub Actions publica las imágenes ghcr.io/&lt;owner&gt;/procesos-backend y procesos-frontend (tags latest y el SHA corto del commit) y el runner self-hosted las aplica con kubectl.</li>
+</ul>
+<figure class="wiki-figure">
+  <img src="/images/documentacion/arquitectura-c4/fig2.png" alt="Figura 2. Diagrama de contenedores (nivel 2) tal como se despliega en el namespace procesos de MicroK8s." loading="lazy" />
+  <figcaption>Figura 2. Diagrama de contenedores (nivel 2) tal como se despliega en el namespace procesos de MicroK8s.</figcaption>
+</figure>
+<h2>4. Nivel 3 - Componentes</h2>
+<p><strong>Contenedor seleccionado: </strong>API REST (Spring Boot). Es el contenedor que concentra las reglas de negocio, la seguridad y el acceso a datos.</p>
+<p><strong>Componentes internos y responsabilidades:</strong></p>
+<ul>
+<li>Cadena de seguridad (SecurityConfig, JwtFiltro): API sin estado, CSRF desactivado (solo acepta el token en el encabezado), CORS por lista de orígenes y reglas por método y ruta: GET para cualquier rol; POST/PUT de modelado para ADMIN y EDITOR; DELETE, usuarios, empresa y roles solo ADMIN.</li>
+<li>JwtServicio: genera y valida tokens HMAC-SHA256 con identificador único (jti), correo, usuarioId, empresaId, rol y vencimiento (60 minutos por defecto). Al cerrar sesión guarda el jti en TokenRevocado y desde ese momento rechaza el token.</li>
+<li>UsuarioDetallesServicio: carga el usuario y su rol desde la base; un usuario desactivado pierde el acceso aunque su token siga vigente.</li>
+<li>AuthController: login con BCrypt, logout (revoca el token), /api/auth/yo, activación de cuenta, verificación y reenvío del correo (máximo 3 por hora).</li>
+<li>Controladores REST: un @RestController por recurso; reciben DTOs validados con @Valid y responden con ResponseEntity (201 al crear, 204 o 200 al eliminar).</li>
+<li>EmpresaActual: entrega la empresa y el usuario de la petición a partir del token, nunca de un dato que envíe el cliente.</li>
+<li>AccesoProcesoService: decide si la empresa puede leer o escribir un proceso: los propios con permiso completo y los compartidos por otra empresa (ProcesoCompartido) solo en lectura.</li>
+<li>AuditoriaService: guarda en HistorialCambio quién hizo cada creación, edición o borrado, sobre qué entidad y cuándo; lo consulta HistorialController.</li>
+<li>Servicios de negocio (@Service, @Transactional): reglas del modelo BPMN, por ejemplo arcos sin self-loop ni duplicados y dentro del mismo proceso, nombres únicos por empresa, roles que no se eliminan mientras estén en uso en una lane.</li>
+<li>CorreoService: envía el enlace de verificación o lo escribe en el log si el correo está desactivado.</li>
+<li>Repositorios (Spring Data JPA): una interfaz por entidad, con consultas JPQL que filtran por empresa.</li>
+<li>Modelo de dominio: entidades JPA Empresa, Usuario, Proceso, ElementoConectable (Actividad, Gateway), Arco, Pool, Lane, RolProceso, Mensaje, ProcesoCompartido, PermisoPool, HistorialCambio, TokenRevocado y VerificacionToken.</li>
+<li>GlobalExceptionHandler (@RestControllerAdvice): traduce las excepciones a un cuerpo uniforme {timestamp, status, mensaje} con 400, 401, 403, 404, 405, 415 o 500, sin exponer trazas.</li>
+</ul>
+<p><strong>Relaciones y dependencias: </strong>cada petición pasa primero por la cadena de seguridad, que valida el token con JwtServicio y carga el usuario con UsuarioDetallesServicio. Si la ruta es pública sigue a AuthController; si no, llega al controlador solo cuando el rol alcanza. Los controladores piden la empresa a EmpresaActual y delegan en los servicios; los servicios verifican el acceso con AccesoProcesoService, registran cada cambio con AuditoriaService y usan los repositorios, que mapean las entidades a PostgreSQL. Las dependencias van siempre de arriba hacia abajo (un repositorio nunca llama a un servicio) y se inyectan por constructor, lo que permite probar cada capa con dobles de prueba.</p>
+<figure class="wiki-figure">
+  <img src="/images/documentacion/arquitectura-c4/fig3.png" alt="Figura 3. Diagrama de componentes (nivel 3) de la API REST." loading="lazy" />
+  <figcaption>Figura 3. Diagrama de componentes (nivel 3) de la API REST.</figcaption>
+</figure>
+<h2>5. Nivel 4 - Código (opcional)</h2>
+<p><strong>Módulo o componente seleccionado: </strong>módulo de arcos (HU-11, HU-12 y HU-13), el que une los elementos del diagrama. Se eligió porque en él se ve la herencia polimórfica del modelo y las validaciones de coherencia del diagrama.</p>
+<p><strong>Diagrama o estructura de clases / módulos: </strong>Actividad y Gateway extienden la entidad abstracta ElementoConectable con herencia JOINED, así que un Arco tiene origen y destino de tipo ElementoConectable y puede unir cualquier combinación de actividades y gateways. ArcoController expone /api/v1/procesos/{p}/arcos y delega en ArcoService, que antes de guardar valida en validarExtremos que origen y destino existan, sean del mismo proceso, no sean el mismo elemento y que no exista ya un arco entre ese par. Al eliminar, advertenciaAlEliminar avisa si el destino queda sin entradas o el origen sin salidas. Si el origen es un gateway, condicionParaGateway quita la condición cuando es paralelo y la exige cuando es exclusivo o inclusivo. Antes de leer o escribir, ArcoService verifica el acceso con AccesoProcesoService, y cada cambio queda en el historial por medio de AuditoriaService. ArcoRepository consulta siempre por empresa (findByIdAndProcesoEmpresaId), de modo que una empresa no puede leer ni modificar arcos de otra.</p>
+<figure class="wiki-figure">
+  <img src="/images/documentacion/arquitectura-c4/fig4.png" alt="Figura 4. Diagrama de clases (nivel 4) del módulo de arcos." loading="lazy" />
+  <figcaption>Figura 4. Diagrama de clases (nivel 4) del módulo de arcos.</figcaption>
+</figure>
+<h2>6. Decisiones y atributos de calidad</h2>
+<h3>Seguridad y control de acceso</h3>
+<ul>
+<li>Contraseñas con BCrypt; el administrador inicial nace inactivo con una contraseña aleatoria y se activa con un token de un solo uso que vence en 24 horas.</li>
+<li>JWT firmado con una clave de mínimo 32 caracteres guardada en el Secret de Kubernetes (JWT_SECRET); el login fallido responde 401 con un mensaje genérico que no revela si el correo existe; el logout revoca el token aunque no haya vencido.</li>
+<li>Autorización por rol en SecurityConfig (compartir procesos y definir permisos de pool solo ADMIN) y aislamiento por empresa en cada consulta; los procesos compartidos se ven en solo lectura; el frontend oculta botones según el rol, pero quien decide es siempre el backend.</li>
+<li>Credenciales de base de datos y de la aplicación solo en variables de entorno y Secrets; nunca en el repositorio.</li>
+<li>El detalle de roles y pruebas de seguridad está en el documento &quot;Roles y seguridad&quot;.</li>
+</ul>
+<h3>Escalabilidad y rendimiento</h3>
+<ul>
+<li>La API no guarda sesión: cualquier réplica puede atender cualquier petición mientras compartan el mismo JWT_SECRET, así que el backend se puede escalar con kubectl scale. Hoy corre con 1 réplica; el frontend corre con 2.</li>
+<li>Requests y limits de CPU y memoria en cada Deployment (backend 384–768 Mi, JVM con MaxRAMPercentage=75) y probes que sacan del Service a un pod que no responde.</li>
+<li>Listados paginados (page/size, tamaño máximo 100) y relaciones JPA con carga LAZY para no traer datos que no se usan.</li>
+<li>Costo conocido: revisar si un token fue revocado es una consulta a la base en cada petición; los tokens vencidos se borran de esa tabla al revocar uno nuevo.</li>
+<li>Límite conocido: PostgreSQL es una sola instancia con disco ReadWriteOnce; es el punto que no escala horizontalmente. Las mediciones están en el documento &quot;Pruebas de carga&quot; (plan JMeter en src/test/jmeter/plan-carga.jmx).</li>
+</ul>
+<h3>Mantenibilidad</h3>
+<ul>
+<li>Capas y paquetes separados por responsabilidad (controllers, services, repository, model, dto, security, config, util) y una carpeta por funcionalidad en el frontend, con su propio archivo de rutas.</li>
+<li>DTOs en la frontera de la API: cambiar una entidad no rompe el contrato con el frontend.</li>
+<li>Cerca de 360 casos de prueba en el backend (servicios, controladores, seguridad, modelo) y pruebas de guards e interceptor en el frontend; cobertura con JaCoCo y análisis con SonarQube.</li>
+<li>Calidad en el frontend con ESLint (prohíbe any, fetch y axios) y un servidor mock (npm run mock) para trabajar sin backend.</li>
+<li>Historial de cambios por entidad (quién, qué y cuándo) que sirve para auditar y para depurar.</li>
+<li>Documentación de la API generada desde el código (Swagger), guía de despliegue versionada en DESPLIEGUE_K8S.md y wiki del proyecto en /wiki.</li>
+</ul>
+<p><strong>Justificación de decisiones y compromisos: </strong>se priorizó separar responsabilidades para que cada parte cambie sin afectar a las demás, idea central del curso. Los compromisos aceptados son: para poder revocar el JWT al cerrar sesión, cada petición consulta la tabla de tokens revocados, lo que hace la API un poco menos &quot;sin estado&quot;; el borrado lógico obliga a validar la unicidad de nombres en el servicio y no con restricciones de la base; la herencia JOINED agrega joins al consultar elementos a cambio de no tener columnas nulas; y una base de datos única simplifica la operación del curso a costa de no tener alta disponibilidad. La tabla de decisiones resume cada una.</p>
+<h3>Inventario de contenedores</h3>
+<table>
+<thead>
+<tr>
+<th>Contenedor</th>
+<th>Responsabilidad</th>
+<th>Tecnología</th>
+<th>Comunicación</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Ingress (NGINX, MicroK8s)</td>
+<td>Entrada única al sistema; enruta /api y Swagger al backend y el resto al frontend</td>
+<td>Ingress de Kubernetes, ingressClassName public</td>
+<td>HTTP por la IP 10.43.99.75</td>
+</tr>
+<tr>
+<td>Servidor web</td>
+<td>Sirve los archivos estáticos de la SPA y reenvía /api/ al backend</td>
+<td>nginx 1.27-alpine, 2 réplicas</td>
+<td>HTTP :80; proxy HTTP a procesos-backend:8080</td>
+</tr>
+<tr>
+<td>SPA</td>
+<td>Interfaz de usuario: empresas, usuarios, procesos, editor del diagrama, roles</td>
+<td>Angular 20, TypeScript, corre en el navegador</td>
+<td>JSON/HTTP a /api con JWT</td>
+</tr>
+<tr>
+<td>API REST</td>
+<td>Reglas de negocio, validación BPMN, autenticación, permisos y aislamiento por empresa</td>
+<td>Java 17, Spring Boot 3.3.2, Spring Security + JWT</td>
+<td>HTTP :8080 (REST/JSON); JDBC a la base; SMTP</td>
+</tr>
+<tr>
+<td>Wiki del proyecto</td>
+<td>Documentación del proyecto: entregas, arquitectura e historias de usuario</td>
+<td>Contenedor propio en el namespace procesos</td>
+<td>HTTP :8080 por el Ingress procesos-wiki (/wiki, /api/wiki)</td>
+</tr>
+<tr>
+<td>Base de datos</td>
+<td>Persistencia de todas las entidades con borrado lógico</td>
+<td>PostgreSQL 16 + PVC 1 Gi (H2 en desarrollo)</td>
+<td>TCP :5432 desde la API</td>
+</tr>
+<tr>
+<td>Servidor SMTP (externo)</td>
+<td>Entrega de correos de verificación y activación</td>
+<td>Gmail u otro SMTP</td>
+<td>SMTP 587 con STARTTLS (desactivado en el despliegue)</td>
+</tr>
+</tbody>
+</table>
+<h3>Decisiones arquitectónicas</h3>
+<table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Decisión</th>
+<th>Alternativa</th>
+<th>Justificación</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>AD-01</td>
+<td>SPA en Angular y API REST en Spring Boot, en repositorios y despliegues separados</td>
+<td>Vistas server-side con Thymeleaf (usadas al inicio del semestre)</td>
+<td>Desacopla interfaz y lógica, permite desplegar y escalar cada parte por separado y es lo que pide la entrega 2</td>
+</tr>
+<tr>
+<td>AD-02</td>
+<td>Autenticación sin estado con JWT (HMAC-SHA256, 60 min)</td>
+<td>Sesión HTTP con cookie en el servidor</td>
+<td>Cualquier réplica atiende cualquier petición y no aplica CSRF; el logout revoca el token guardando su jti en la base</td>
+</tr>
+<tr>
+<td>AD-03</td>
+<td>Empresa y rol tomados del token validado (EmpresaActual)</td>
+<td>Encabezado X-Empresa-Id enviado por el cliente (usado en la entrega 2)</td>
+<td>El cliente no puede hacerse pasar por otra empresa; la única excepción son los procesos compartidos, en solo lectura</td>
+</tr>
+<tr>
+<td>AD-04</td>
+<td>Borrado lógico con @SQLDelete y @SQLRestriction</td>
+<td>Borrado físico de filas</td>
+<td>Regla del enunciado: conservar trazabilidad y auditoría; la unicidad se valida en el servicio</td>
+</tr>
+<tr>
+<td>AD-05</td>
+<td>Herencia JOINED en ElementoConectable (Actividad, Gateway)</td>
+<td>SINGLE_TABLE o TABLE_PER_CLASS</td>
+<td>Un arco une cualquier par de elementos sin columnas nulas ni repetidas; cuesta un join al consultar</td>
+</tr>
+<tr>
+<td>AD-06</td>
+<td>PostgreSQL 16 en producción y H2 en desarrollo</td>
+<td>MySQL</td>
+<td>Motor robusto y libre que el equipo usó desde el inicio; H2 permite arrancar y probar sin instalar nada</td>
+</tr>
+<tr>
+<td>AD-07</td>
+<td>Un único Ingress y nginx como proxy de /api (mismo origen)</td>
+<td>Exponer el backend aparte con NodePort y habilitar CORS</td>
+<td>Una sola dirección para todo el sistema y sin problemas de CORS en el navegador</td>
+</tr>
+<tr>
+<td>AD-08</td>
+<td>CI/CD con GitHub Actions → GHCR → runner self-hosted en MicroK8s</td>
+<td>Construir y desplegar a mano en la VM</td>
+<td>Cada push a main se despliega igual; las imágenes con el SHA del commit permiten volver a una versión exacta</td>
+</tr>
+<tr>
+<td>AD-09</td>
+<td>Validar las reglas del diagrama en el backend, no solo en el frontend</td>
+<td>Validar solo en la interfaz</td>
+<td>Cualquiera puede llamar la API con Postman; el backend es la única fuente de verdad</td>
+</tr>
+</tbody>
+</table>
+<h3>Anexos y referencias</h3>
+<p>Repositorio / documentación: backend github.com/Desarrollo-Web-2630/Proyecto1 · frontend github.com/Desarrollo-Web-2630/Proyecto2 · guía de despliegue DESPLIEGUE_K8S.md (repositorio del backend) · API documentada en http://10.43.99.75/swagger-ui.html (con la VPN de la Javeriana).</p>
+<p>Capturas, diagramas, reportes, logs u otras evidencias: figuras 1 a 4 de este documento, elaboradas con Graphviz a partir del código de main. Estado del despliegue en el monitor del curso https://javeriana.inphotech.co/k8smonitor. Documentos relacionados de la entrega final: Despliegue, Pruebas de carga, Pruebas unitarias y SonarQube, y Roles y seguridad.</p>
